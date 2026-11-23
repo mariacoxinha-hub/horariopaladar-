@@ -1,0 +1,1881 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Ponto Paladar" />
+  <title>Controle de Ponto - Gestão de Horas</title>
+  <style>
+    :root {
+      --bg: #f2f2f7;
+      --card: #ffffff;
+      --text: #1c1c1e;
+      --muted: #8e8e93;
+      --border: #e5e5ea;
+      --primary: #007aff;
+      --primary-dark: #0056b3;
+      --success: #34c759;
+      --warning: #ff9500;
+      --danger: #ff3b30;
+      --purple: #af52de;
+      --teal: #30b0c7;
+      --radius: 16px;
+      --shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      padding-bottom: 92px;
+    }
+
+    header {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 16px 20px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .sync-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #e8f5e9;
+      color: #2e7d32;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .sync-badge.offline {
+      background: #fff3e0;
+      color: #ef6c00;
+    }
+
+    .sync-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Relógio */
+    .clock-box {
+      text-align: center;
+      padding: 20px 16px;
+      background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
+      color: #fff;
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    }
+
+    .clock-time {
+      font-size: 44px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -1px;
+      line-height: 1.1;
+    }
+
+    .clock-date {
+      font-size: 14px;
+      color: #aeaeb2;
+      margin-top: 6px;
+      text-transform: capitalize;
+    }
+
+    /* Grid de Funcionárias no Ponto */
+    .emp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+      gap: 10px;
+    }
+
+    .emp-chip {
+      border: 2px solid var(--border);
+      background: #fff;
+      border-radius: 14px;
+      padding: 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .emp-chip.selected {
+      border-color: var(--primary);
+      background: #f0f7ff;
+    }
+
+    .emp-chip-name {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .emp-chip-role {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .status-pill {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #f2f2f7;
+      color: #636366;
+    }
+
+    .status-pill.working { background: #e8f5e9; color: #1b5e20; }
+    .status-pill.lunch { background: #fff3e0; color: #e65100; }
+    .status-pill.done { background: #e3f2fd; color: #0d47a1; }
+    .status-pill.off { background: #f3e5f5; color: #6a1b9a; }
+
+    /* Botões de Batida */
+    .punch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .punch-btn {
+      border: none;
+      border-radius: 14px;
+      padding: 16px 12px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      opacity: 0.55;
+      transition: transform 0.1s, opacity 0.15s, box-shadow 0.15s;
+    }
+
+    .punch-btn.recommended {
+      opacity: 1;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.16);
+      transform: scale(1.01);
+    }
+
+    .punch-btn:active { transform: scale(0.97); }
+    .punch-btn span { font-size: 11px; font-weight: 500; opacity: 0.9; }
+
+    .btn-in { background: var(--success); }
+    .btn-lunch-out { background: var(--warning); }
+    .btn-lunch-in { background: var(--teal); }
+    .btn-out { background: var(--danger); }
+
+    /* Feed do dia */
+    .feed-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    .feed-item:last-child { border-bottom: none; }
+
+    /* Navegação Inferior */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 0 18px;
+      z-index: 50;
+    }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 4px 16px;
+    }
+
+    .nav-btn.active { color: var(--primary); }
+    .nav-icon { font-size: 20px; }
+
+    /* PIN Lock */
+    .pin-box {
+      max-width: 320px;
+      margin: 24px auto;
+      text-align: center;
+    }
+
+    .pin-dots {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin: 20px 0;
+    }
+
+    .pin-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--primary);
+      background: transparent;
+    }
+
+    .pin-dot.filled { background: var(--primary); }
+
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .key-btn {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 68px;
+      height: 68px;
+      margin: 0 auto;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .key-btn:active { background: #e5e5ea; }
+
+    /* Sub-abas do Gestor */
+    .sub-tabs {
+      display: flex;
+      background: #e5e5ea;
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 16px;
+      gap: 4px;
+    }
+
+    .sub-tab {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 8px 6px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #636366;
+      cursor: pointer;
+    }
+
+    .sub-tab.active {
+      background: #fff;
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Formulários */
+    .form-group { margin-bottom: 12px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #48484a;
+      margin-bottom: 5px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 11px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-light { background: #e5e5ea; color: var(--text); }
+    .btn-block { width: 100%; }
+    .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+
+    /* KPIs */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .kpi-card {
+      background: #f9f9fb;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .kpi-label { font-size: 11px; color: var(--muted); }
+    .kpi-val { font-size: 16px; font-weight: 700; margin-top: 4px; }
+    .pos { color: var(--success); }
+    .neg { color: var(--danger); }
+
+    /* Tabela Espelho */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th, td {
+      padding: 9px 6px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      background: #f9f9fb;
+    }
+
+    tr.sunday-row { background: #f8f8fa; color: #8e8e93; }
+    tr.holiday-row { background: #fff8e1; }
+    tr.absence-row { background: #ffebee; }
+    tr.off-row { background: #f3e5f5; }
+
+    /* Lista Equipe */
+    .staff-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      background: #fff;
+    }
+
+    .staff-item:active { background: #f2f2f7; }
+
+    .exam-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+    .exam-ok { background: #e8f5e9; color: #2e7d32; }
+    .exam-warn { background: #ffebee; color: #c62828; }
+
+    /* Modais */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal-sheet {
+      background: #fff;
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 20px;
+      animation: slideUp 0.2s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h3 { margin: 0; font-size: 17px; }
+
+    .obs-card {
+      background: #f9f9fb;
+      border-left: 3px solid var(--primary);
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .obs-date {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .hidden { display: none !important; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 72px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1c1c1e;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 200;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+      display: none;
+    }
+
+    /* Impressão */
+    @media print {
+      body { background: #fff; padding: 0; }
+      header, .bottom-nav, .no-print { display: none !important; }
+      .modal-backdrop { position: static; background: none; display: block !important; }
+      .modal-sheet { max-height: none; box-shadow: none; padding: 0; border-radius: 0; }
+      .card { box-shadow: none; border: 1px solid #ddd; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Ponto &amp; Gestão</h1>
+    <div id="syncBadge" class="sync-badge offline">
+      <span class="sync-dot"></span>
+      <span id="syncText">Conectando...</span>
+    </div>
+  </header>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- ABA 1: CARTÃO DE PONTO (PÚBLICA) -->
+  <main id="tabPonto" class="container">
+    <div class="clock-box">
+      <div id="liveTime" class="clock-time">00:00:00</div>
+      <div id="liveDate" class="clock-date">Carregando data...</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">1. Selecione a Funcionária</div>
+      <div id="pontoEmpGrid" class="emp-grid">
+        <p style="color:var(--muted);font-size:13px;">Carregando equipe...</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>2. Registrar Horário</span>
+        <span id="selectedEmpLabel" style="font-size:12px;color:var(--primary);">Nenhuma selecionada</span>
+      </div>
+      <div class="punch-grid">
+        <button class="punch-btn btn-in" id="btnEntrada" onclick="registrarBatida('entrada')">
+          Entrada
+          <span id="lblEntrada">--:--</span>
+        </button>
+        <button class="punch-btn btn-lunch-out" id="btnSaidaAlmoco" onclick="registrarBatida('saidaAlmoco')">
+          Saída Intervalo
+          <span id="lblSaidaAlmoco">--:--</span>
+        </button>
+        <button class="punch-btn btn-lunch-in" id="btnVoltaAlmoco" onclick="registrarBatida('voltaAlmoco')">
+          Volta Intervalo
+          <span id="lblVoltaAlmoco">--:--</span>
+        </button>
+        <button class="punch-btn btn-out" id="btnSaida" onclick="registrarBatida('saida')">
+          Saída
+          <span id="lblSaida">--:--</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Registros de Hoje na Loja</div>
+      <div id="todayFeed">
+        <p style="color:var(--muted);font-size:13px;">Nenhum registro hoje.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- ABA 2: PAINEL DO GESTOR (PROTEGIDA POR PIN) -->
+  <main id="tabGestor" class="container hidden">
+    <!-- Tela de Bloqueio PIN -->
+    <div id="pinScreen" class="card pin-box">
+      <div style="font-size:32px;margin-bottom:8px;">🔒</div>
+      <h2 style="margin:0 0 6px;font-size:18px;">Área Restrita do Gestor</h2>
+      <p style="margin:0;font-size:13px;color:var(--muted);">Digite o PIN de administrador para acessar</p>
+      <div class="pin-dots" id="pinDots">
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+      </div>
+      <div class="keypad">
+        <button class="key-btn" onclick="pressPin('1')">1</button>
+        <button class="key-btn" onclick="pressPin('2')">2</button>
+        <button class="key-btn" onclick="pressPin('3')">3</button>
+        <button class="key-btn" onclick="pressPin('4')">4</button>
+        <button class="key-btn" onclick="pressPin('5')">5</button>
+        <button class="key-btn" onclick="pressPin('6')">6</button>
+        <button class="key-btn" onclick="pressPin('7')">7</button>
+        <button class="key-btn" onclick="pressPin('8')">8</button>
+        <button class="key-btn" onclick="pressPin('9')">9</button>
+        <button class="key-btn" style="font-size:14px;" onclick="clearPin()">Limpar</button>
+        <button class="key-btn" onclick="pressPin('0')">0</button>
+        <button class="key-btn" style="font-size:18px;" onclick="backspacePin()">⌫</button>
+      </div>
+    </div>
+
+    <!-- Conteúdo Desbloqueado do Gestor -->
+    <div id="adminContent" class="hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span style="font-size:13px;font-weight:700;color:var(--success);">● Modo Administrador Ativo</span>
+        <button class="btn btn-light btn-sm" onclick="lockAdmin()">Bloquear Painel</button>
+      </div>
+
+      <div class="sub-tabs">
+        <button class="sub-tab active" onclick="switchSubTab('espelho', this)">Espelho &amp; Relatório</button>
+        <button class="sub-tab" onclick="switchSubTab('equipe', this)">Equipe &amp; Fichas</button>
+        <button class="sub-tab" onclick="switchSubTab('ajustes', this)">Feriados &amp; PIN</button>
+      </div>
+
+      <!-- SUB-ABA 1: ESPELHO E RELATÓRIO MENSAL -->
+      <section id="subEspelho">
+        <div class="card">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Funcionária</label>
+              <select id="filterEmp" onchange="renderEspelho()"></select>
+            </div>
+            <div class="form-group">
+              <label>Mês de Referência</label>
+              <input type="month" id="filterMonth" onchange="renderEspelho()" />
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary" style="flex:1;" onclick="abrirRelatorioMensal()">📄 Gerar Relatório do Mês</button>
+            <button class="btn btn-light" onclick="openEditDayModal()">+ Lançar / Editar Dia</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Trabalhado</div>
+            <div id="kpiWorked" class="kpi-val">00:00</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Previsto</div>
+            <div id="kpiExpected" class="kpi-val">00:00</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Saldo</div>
+            <div id="kpiBalance" class="kpi-val">00:00</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Registros do Mês</span>
+            <span style="font-size:11px;color:var(--muted);">Toque no dia para editar</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Dia</th>
+                  <th>Status / Horários</th>
+                  <th>Total</th>
+                  <th>Saldo</th>
+                </tr>
+              </thead>
+              <tbody id="espelhoBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SUB-ABA 2: EQUIPE E FICHAS -->
+      <section id="subEquipe" class="hidden">
+        <div class="card">
+          <div class="card-title">
+            <span>Funcionárias Cadastradas</span>
+            <button class="btn btn-primary btn-sm" onclick="openEmpFormModal()">+ Nova Funcionária</button>
+          </div>
+          <div id="staffList"></div>
+        </div>
+      </section>
+
+      <!-- SUB-ABA 3: FERIADOS E PIN -->
+      <section id="subAjustes" class="hidden">
+        <div class="card">
+          <div class="card-title">Cadastrar Feriado</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Data do Feriado</label>
+              <input type="date" id="holidayDate" />
+            </div>
+            <div class="form-group">
+              <label>Descrição</label>
+              <input type="text" id="holidayName" placeholder="Ex: Aniversário da Cidade" />
+            </div>
+          </div>
+          <button class="btn btn-primary btn-block" onclick="addHoliday()">Salvar Feriado</button>
+          <div id="holidayList" style="margin-top:14px;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Alterar PIN do Administrador</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Novo PIN (4 dígitos)</label>
+              <input type="password" id="newPinInput" maxlength="4" inputmode="numeric" placeholder="Ex: 4321" />
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-end;">
+              <button class="btn btn-success btn-block" onclick="saveNewPin()">Atualizar PIN</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- NAVEGAÇÃO INFERIOR -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="navPonto" onclick="switchMainTab('ponto')">
+      <span class="nav-icon">⏱️</span>
+      <span>Cartão de Ponto</span>
+    </button>
+    <button class="nav-btn" id="navGestor" onclick="switchMainTab('gestor')">
+      <span class="nav-icon">📊</span>
+      <span>Painel Gestor</span>
+    </button>
+  </nav>
+
+  <!-- MODAL 1: EDITAR / LANÇAR DIA (SOMENTE ADMIN) -->
+  <div id="modalEditDay" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3>Lançar / Editar Dia (Admin)</h3>
+        <button class="btn btn-light btn-sm" onclick="closeModal('modalEditDay')">Fechar</button>
+      </div>
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="editDate" onchange="loadDayIntoModal()" />
+      </div>
+      <div class="form-group">
+        <label>Situação do Dia</label>
+        <select id="editStatus" onchange="toggleStatusFields()">
+          <option value="normal">Trabalho Normal</option>
+          <option value="folga">Folga</option>
+          <option value="ferias">Férias</option>
+          <option value="falta">Falta</option>
+          <option value="feriado">Feriado</option>
+        </select>
+      </div>
+
+      <div id="absenceReasonGroup" class="form-group hidden">
+        <label>Motivo da Falta (Obrigatório)</label>
+        <select id="absenceReasonSelect" onchange="toggleCustomAbsence()" style="margin-bottom:8px;">
+          <option value="Falta Injustificada">Falta Injustificada</option>
+          <option value="Atestado Médico">Atestado Médico</option>
+          <option value="Consulta / Exame">Consulta / Exame</option>
+          <option value="Outro">Outro motivo (digitar abaixo)</option>
+        </select>
+        <input type="text" id="absenceReasonCustom" class="hidden" placeholder="Descreva o motivo da falta..." />
+      </div>
+
+      <div id="holidayDescGroup" class="form-group hidden">
+        <label>Nome do Feriado</label>
+        <input type="text" id="editHolidayName" placeholder="Ex: Feriado Nacional" />
+      </div>
+
+      <div id="timeInputsGroup">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Entrada</label>
+            <input type="time" id="editEntrada" />
+          </div>
+          <div class="form-group">
+            <label>Saída Intervalo</label>
+            <input type="time" id="editSaidaAlmoco" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Volta Intervalo</label>
+            <input type="time" id="editVoltaAlmoco" />
+          </div>
+          <div class="form-group">
+            <label>Saída</label>
+            <input type="time" id="editSaida" />
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="saveDayRecord()">Salvar Alteração</button>
+        <button class="btn btn-danger" onclick="deleteDayRecord()">Limpar Dia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: CADASTRO / EDIÇÃO DE FUNCIONÁRIA -->
+  <div id="modalEmpForm" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 id="empModalTitle">Cadastrar Funcionária</h3>
+        <button class="btn btn-light btn-sm" onclick="closeModal('modalEmpForm')">Fechar</button>
+      </div>
+      <input type="hidden" id="empEditId" />
+      <div class="form-group">
+        <label>Nome Completo *</label>
+        <input type="text" id="empFullName" placeholder="Ex: Maria Aparecida Silva" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Celular *</label>
+          <input type="tel" id="empPhone" placeholder="(35) 99999-9999" oninput="maskPhone(this)" />
+        </div>
+        <div class="form-group">
+          <label>Função *</label>
+          <input type="text" id="empRole" placeholder="Ex: Atendente / Cozinha" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Data de Admissão *</label>
+          <input type="date" id="empAdmission" />
+        </div>
+        <div class="form-group">
+          <label>Último Exame Periódico</label>
+          <input type="date" id="empLastExam" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Carga Diária (Seg a Sex) *</label>
+          <input type="time" id="empLoadWeek" value="08:00" />
+        </div>
+        <div class="form-group">
+          <label>Carga Diária (Sábado) *</label>
+          <input type="time" id="empLoadSat" value="04:00" />
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="saveEmployee()">Salvar Funcionária</button>
+    </div>
+  </div>
+
+  <!-- MODAL 3: FICHA COMPLETA DA FUNCIONÁRIA E OBSERVAÇÕES -->
+  <div id="modalEmpDossier" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 id="dossierName">Ficha da Funcionária</h3>
+        <button class="btn btn-light btn-sm" onclick="closeModal('modalEmpDossier')">Fechar</button>
+      </div>
+
+      <div id="dossierDetails" class="card" style="background:#f9f9fb;margin-bottom:14px;"></div>
+
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="editCurrentDossierEmp()">✏️ Editar Cadastro / Exame</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCurrentDossierEmp()">Excluir</button>
+      </div>
+
+      <div class="card" style="border:1px solid var(--border);">
+        <div class="card-title">Adicionar Observação na Ficha</div>
+        <div class="form-group">
+          <textarea id="newObsText" rows="3" placeholder="Escreva uma observação (advertência, elogio, ajuste, combinado)..."></textarea>
+        </div>
+        <button class="btn btn-success btn-block" onclick="addEmployeeObservation()">+ Registrar Observação com Data</button>
+      </div>
+
+      <div class="card" style="border:1px solid var(--border);">
+        <div class="card-title">
+          <span>Relatório de Observações</span>
+          <span id="obsCountBadge" style="font-size:12px;color:var(--muted);">0 registros</span>
+        </div>
+        <div id="dossierObsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: RELATÓRIO MENSAL COMPLETO (IMPRESSÃO / PDF / CSV) -->
+  <div id="modalMonthlyReport" class="modal-backdrop">
+    <div class="modal-sheet" style="max-width:820px;">
+      <div class="modal-header no-print">
+        <h3>Relatório Mensal de Frequência</h3>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-success btn-sm" onclick="exportReportCSV()">Excel (CSV)</button>
+          <button class="btn btn-primary btn-sm" onclick="window.print()">Imprimir / PDF</button>
+          <button class="btn btn-light btn-sm" onclick="closeModal('modalMonthlyReport')">Fechar</button>
+        </div>
+      </div>
+      <div id="reportPrintableArea"></div>
+    </div>
+  </div>
+
+  <!-- FIREBASE SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore, collection, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, orderBy
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNJuyn0_z8iieeGY57_nytRbcFOPb5faw",
+      authDomain: "horario-paladar.firebaseapp.com",
+      projectId: "horario-paladar",
+      storageBucket: "horario-paladar.firebasestorage.app",
+      messagingSenderId: "215075908412",
+      appId: "1:215075908412:web:72df2e85f050924c474c39",
+      measurementId: "G-ZH1V088GT4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Estado Global
+    let employees = [];
+    let records = {}; // chave: `${empId}_${YYYY-MM-DD}`
+    let holidays = {}; // chave: `YYYY-MM-DD` -> nome
+    let selectedPontoEmpId = null;
+    let currentDossierEmpId = null;
+    let adminPin = "1234";
+    let pinBuffer = "";
+    let isAdminUnlocked = false;
+    let lastGeneratedReportRows = [];
+
+    // Feriados Nacionais Fixos Padrão
+    const fixedNationalHolidays = {
+      "01-01": "Confraternização Universal",
+      "04-21": "Tiradentes",
+      "05-01": "Dia do Trabalho",
+      "09-07": "Independência do Brasil",
+      "10-12": "Nossa Senhora Aparecida",
+      "11-02": "Finados",
+      "11-15": "Proclamação da República",
+      "11-20": "Dia da Consciência Negra",
+      "12-25": "Natal"
+    };
+
+    // Utilitários de Data e Hora
+    function getTodayStr() {
+      const now = new Date();
+      return formatDateISO(now);
+    }
+
+    function formatDateISO(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function getCurrentTimeStr() {
+      const now = new Date();
+      return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    }
+
+    function timeToMinutes(t) {
+      if (!t || !t.includes(":")) return 0;
+      const [h, m] = t.split(":").map(Number);
+      return (h * 60) + m;
+    }
+
+    function minutesToTime(mins, showSign = false) {
+      const sign = mins < 0 ? "-" : (showSign && mins > 0 ? "+" : "");
+      const abs = Math.abs(Math.round(mins));
+      const h = String(Math.floor(abs / 60)).padStart(2, "0");
+      const m = String(abs % 60).padStart(2, "0");
+      return `${sign}${h}:${m}`;
+    }
+
+    function formatDateBR(iso) {
+      if (!iso) return "-";
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.style.display = "block";
+      setTimeout(() => { t.style.display = "none"; }, 2600);
+    }
+
+    // Relógio ao vivo
+    function updateClock() {
+      const now = new Date();
+      document.getElementById("liveTime").textContent = now.toLocaleTimeString("pt-BR");
+      document.getElementById("liveDate").textContent = now.toLocaleDateString("pt-BR", {
+        weekday: "long", day: "2-digit", month: "long", year: "numeric"
+      });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Inicializar filtros
+    const now = new Date();
+    document.getElementById("filterMonth").value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    // Listeners Firebase em Tempo Real
+    function initRealtimeSync() {
+      const badge = document.getElementById("syncBadge");
+      const syncText = document.getElementById("syncText");
+
+      // Config / PIN
+      onSnapshot(doc(db, "config", "settings"), (snap) => {
+        if (snap.exists() && snap.data().pin) {
+          adminPin = String(snap.data().pin);
+        }
+        badge.classList.remove("offline");
+        syncText.textContent = "Nuvem Ativa";
+      }, (err) => {
+        console.error(err);
+        badge.classList.add("offline");
+        syncText.textContent = "Erro Firebase";
+      });
+
+      // Funcionárias
+      onSnapshot(collection(db, "employees"), (snap) => {
+        employees = [];
+        snap.forEach((d) => employees.push({ id: d.id, ...d.data() }));
+        employees.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        if (!selectedPontoEmpId && employees.length > 0) {
+          selectedPontoEmpId = employees[0].id;
+        }
+        renderPontoGrid();
+        renderPunchButtons();
+        renderStaffList();
+        populateEmpFilter();
+        renderEspelho();
+        if (currentDossierEmpId) renderDossierModal(currentDossierEmpId);
+      });
+
+      // Registros de Ponto
+      onSnapshot(collection(db, "records"), (snap) => {
+        records = {};
+        snap.forEach((d) => { records[d.id] = d.data(); });
+        renderPontoGrid();
+        renderPunchButtons();
+        renderTodayFeed();
+        renderEspelho();
+      });
+
+      // Feriados Customizados
+      onSnapshot(collection(db, "holidays"), (snap) => {
+        holidays = {};
+        snap.forEach((d) => { holidays[d.id] = d.data().name; });
+        renderHolidayList();
+        renderEspelho();
+      });
+    }
+
+    initRealtimeSync();
+
+    // Navegação Principal
+    window.switchMainTab = function(tab) {
+      document.getElementById("tabPonto").classList.toggle("hidden", tab !== "ponto");
+      document.getElementById("tabGestor").classList.toggle("hidden", tab !== "gestor");
+      document.getElementById("navPonto").classList.toggle("active", tab === "ponto");
+      document.getElementById("navGestor").classList.toggle("active", tab === "gestor");
+    };
+
+    window.switchSubTab = function(sub, btn) {
+      document.querySelectorAll(".sub-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("subEspelho").classList.toggle("hidden", sub !== "espelho");
+      document.getElementById("subEquipe").classList.toggle("hidden", sub !== "equipe");
+      document.getElementById("subAjustes").classList.toggle("hidden", sub !== "ajustes");
+    };
+
+    // PIN do Gestor
+    window.pressPin = function(num) {
+      if (pinBuffer.length >= 4) return;
+      pinBuffer += num;
+      updatePinDots();
+      if (pinBuffer.length === 4) {
+        if (pinBuffer === adminPin) {
+          isAdminUnlocked = true;
+          document.getElementById("pinScreen").classList.add("hidden");
+          document.getElementById("adminContent").classList.remove("hidden");
+          pinBuffer = "";
+          updatePinDots();
+          renderEspelho();
+        } else {
+          showToast("PIN incorreto!");
+          setTimeout(() => { pinBuffer = ""; updatePinDots(); }, 350);
+        }
+      }
+    };
+
+    window.clearPin = function() { pinBuffer = ""; updatePinDots(); };
+    window.backspacePin = function() { pinBuffer = pinBuffer.slice(0, -1); updatePinDots(); };
+
+    function updatePinDots() {
+      const dots = document.querySelectorAll("#pinDots .pin-dot");
+      dots.forEach((d, i) => d.classList.toggle("filled", i < pinBuffer.length));
+    }
+
+    window.lockAdmin = function() {
+      isAdminUnlocked = false;
+      document.getElementById("pinScreen").classList.remove("hidden");
+      document.getElementById("adminContent").classList.add("hidden");
+    };
+
+    window.saveNewPin = async function() {
+      const val = document.getElementById("newPinInput").value.trim();
+      if (!/^\d{4}$/.test(val)) {
+        showToast("Digite exatamente 4 números.");
+        return;
+      }
+      await setDoc(doc(db, "config", "settings"), { pin: val }, { merge: true });
+      document.getElementById("newPinInput").value = "";
+      showToast("PIN atualizado com sucesso!");
+    };
+
+    // Interface Pública: Cartão de Ponto
+    function renderPontoGrid() {
+      const grid = document.getElementById("pontoEmpGrid");
+      if (employees.length === 0) {
+        grid.innerHTML = `<p style="color:var(--muted);font-size:13px;grid-column:1/-1;">Nenhuma funcionária cadastrada. Acesse o Painel Gestor (PIN 1234) para cadastrar.</p>`;
+        return;
+      }
+      const today = getTodayStr();
+      grid.innerHTML = employees.map(emp => {
+        const rec = records[`${emp.id}_${today}`] || {};
+        let statusLabel = "Não iniciou";
+        let statusClass = "";
+        if (rec.status && rec.status !== "normal") {
+          statusLabel = rec.status.toUpperCase();
+          statusClass = "off";
+        } else if (rec.saida) {
+          statusLabel = "Encerrado";
+          statusClass = "done";
+        } else if (rec.voltaAlmoco) {
+          statusLabel = "Trabalhando";
+          statusClass = "working";
+        } else if (rec.saidaAlmoco) {
+          statusLabel = "Em intervalo";
+          statusClass = "lunch";
+        } else if (rec.entrada) {
+          statusLabel = "Trabalhando";
+          statusClass = "working";
+        }
+
+        const isSelected = emp.id === selectedPontoEmpId;
+        return `
+          <div class="emp-chip ${isSelected ? "selected" : ""}" onclick="selectPontoEmp('${emp.id}')">
+            <div class="emp-chip-name">${emp.name}</div>
+            <div class="emp-chip-role">${emp.role || "Equipe"}</div>
+            <span class="status-pill ${statusClass}">${statusLabel}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    window.selectPontoEmp = function(empId) {
+      selectedPontoEmpId = empId;
+      renderPontoGrid();
+      renderPunchButtons();
+    };
+
+    function renderPunchButtons() {
+      const emp = employees.find(e => e.id === selectedPontoEmpId);
+      const lbl = document.getElementById("selectedEmpLabel");
+      const btns = ["btnEntrada", "btnSaidaAlmoco", "btnVoltaAlmoco", "btnSaida"];
+      btns.forEach(id => document.getElementById(id).classList.remove("recommended"));
+
+      if (!emp) {
+        lbl.textContent = "Nenhuma selecionada";
+        return;
+      }
+
+      lbl.textContent = emp.name;
+      const rec = records[`${emp.id}_${getTodayStr()}`] || {};
+      document.getElementById("lblEntrada").textContent = rec.entrada || "--:--";
+      document.getElementById("lblSaidaAlmoco").textContent = rec.saidaAlmoco || "--:--";
+      document.getElementById("lblVoltaAlmoco").textContent = rec.voltaAlmoco || "--:--";
+      document.getElementById("lblSaida").textContent = rec.saida || "--:--";
+
+      if (!rec.entrada) document.getElementById("btnEntrada").classList.add("recommended");
+      else if (!rec.saidaAlmoco) document.getElementById("btnSaidaAlmoco").classList.add("recommended");
+      else if (!rec.voltaAlmoco) document.getElementById("btnVoltaAlmoco").classList.add("recommended");
+      else if (!rec.saida) document.getElementById("btnSaida").classList.add("recommended");
+    }
+
+    window.registrarBatida = async function(tipo) {
+      if (!selectedPontoEmpId) {
+        showToast("Selecione uma funcionária primeiro.");
+        return;
+      }
+      const emp = employees.find(e => e.id === selectedPontoEmpId);
+      const today = getTodayStr();
+      const docId = `${emp.id}_${today}`;
+      const existing = records[docId] || {};
+
+      // Funcionária não pode sobrescrever batida já registrada (somente admin altera)
+      if (existing[tipo]) {
+        showToast("Este horário já foi registrado. Peça ao gestor se precisar alterar.");
+        return;
+      }
+
+      const horaAgora = getCurrentTimeStr();
+      const payload = {
+        ...existing,
+        empId: emp.id,
+        empName: emp.name,
+        date: today,
+        status: "normal",
+        [tipo]: horaAgora,
+        updatedAt: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, "records", docId), payload, { merge: true });
+      const nomesTipo = {
+        entrada: "Entrada",
+        saidaAlmoco: "Saída Intervalo",
+        voltaAlmoco: "Volta Intervalo",
+        saida: "Saída"
+      };
+      showToast(`${nomesTipo[tipo]} registrada às ${horaAgora} para ${emp.name}`);
+    };
+
+    function renderTodayFeed() {
+      const feed = document.getElementById("todayFeed");
+      const today = getTodayStr();
+      const items = [];
+      employees.forEach(emp => {
+        const r = records[`${emp.id}_${today}`];
+        if (!r) return;
+        if (r.entrada) items.push({ time: r.entrada, text: `${emp.name} — Entrada` });
+        if (r.saidaAlmoco) items.push({ time: r.saidaAlmoco, text: `${emp.name} — Saída Intervalo` });
+        if (r.voltaAlmoco) items.push({ time: r.voltaAlmoco, text: `${emp.name} — Volta Intervalo` });
+        if (r.saida) items.push({ time: r.saida, text: `${emp.name} — Saída` });
+      });
+      items.sort((a, b) => b.time.localeCompare(a.time));
+      if (items.length === 0) {
+        feed.innerHTML = `<p style="color:var(--muted);font-size:13px;">Nenhum registro hoje.</p>`;
+        return;
+      }
+      feed.innerHTML = items.map(i => `
+        <div class="feed-item">
+          <span>${i.text}</span>
+          <strong>${i.time}</strong>
+        </div>
+      `).join("");
+    }
+
+    // Cálculo de Horas de um Dia
+    function calculateDayMetrics(emp, dateStr, rec) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      const dt = new Date(y, m - 1, d);
+      const dayOfWeek = dt.getDay(); // 0 = Domingo, 6 = Sábado
+      const mmdd = `${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+      const customHolidayName = holidays[dateStr];
+      const fixedHolidayName = fixedNationalHolidays[mmdd];
+      const holidayTitle = (rec && rec.status === "feriado" && rec.holidayName)
+        ? rec.holidayName
+        : (customHolidayName || fixedHolidayName || null);
+
+      let expectedMins = 0;
+      if (dayOfWeek === 0) {
+        expectedMins = 0;
+      } else if (dayOfWeek === 6) {
+        expectedMins = timeToMinutes(emp.loadSat || "04:00");
+      } else {
+        expectedMins = timeToMinutes(emp.loadWeek || "08:00");
+      }
+
+      // Status especiais
+      const status = rec?.status || (holidayTitle ? "feriado" : "normal");
+
+      if (dayOfWeek === 0 && (!rec || status === "normal") && !rec?.entrada) {
+        return { type: "domingo", label: "Domingo", workedMins: 0, expectedMins: 0, balanceMins: 0 };
+      }
+
+      if (status === "feriado" || (holidayTitle && status === "normal" && !rec?.entrada)) {
+        return { type: "feriado", label: `Feriado: ${holidayTitle || "Feriado"}`, workedMins: 0, expectedMins: 0, balanceMins: 0 };
+      }
+
+      if (status === "folga") {
+        return { type: "folga", label: "Folga", workedMins: 0, expectedMins: 0, balanceMins: 0 };
+      }
+
+      if (status === "ferias") {
+        return { type: "ferias", label: "Férias", workedMins: 0, expectedMins: 0, balanceMins: 0 };
+      }
+
+      if (status === "falta") {
+        const motivo = rec?.absenceReason || "Não informado";
+        return {
+          type: "falta",
+          label: `Falta (${motivo})`,
+          workedMins: 0,
+          expectedMins,
+          balanceMins: -expectedMins
+        };
+      }
+
+      // Trabalho normal: calcular períodos
+      let workedMins = 0;
+      if (rec?.entrada && rec?.saidaAlmoco) {
+        workedMins += Math.max(0, timeToMinutes(rec.saidaAlmoco) - timeToMinutes(rec.entrada));
+      }
+      if (rec?.voltaAlmoco && rec?.saida) {
+        workedMins += Math.max(0, timeToMinutes(rec.saida) - timeToMinutes(rec.voltaAlmoco));
+      } else if (rec?.entrada && rec?.saida && !rec?.saidaAlmoco && !rec?.voltaAlmoco) {
+        workedMins += Math.max(0, timeToMinutes(rec.saida) - timeToMinutes(rec.entrada));
+      }
+
+      const timesText = [rec?.entrada, rec?.saidaAlmoco, rec?.voltaAlmoco, rec?.saida]
+        .filter(Boolean)
+        .join(" • ");
+
+      // Se é um dia futuro ou ainda sem batidas em dia útil
+      const todayStr = getTodayStr();
+      if (!rec || (!rec.entrada && !rec.saida)) {
+        if (dateStr >= todayStr) {
+          return { type: "pendente", label: "-", workedMins: 0, expectedMins: 0, balanceMins: 0 };
+        }
+        return { type: "sem_registro", label: "Sem registro", workedMins: 0, expectedMins, balanceMins: -expectedMins };
+      }
+
+      return {
+        type: "normal",
+        label: timesText || "Em andamento",
+        workedMins,
+        expectedMins,
+        balanceMins: workedMins - expectedMins
+      };
+    }
+
+    // Espelho de Ponto
+    function populateEmpFilter() {
+      const sel = document.getElementById("filterEmp");
+      const current = sel.value;
+      sel.innerHTML = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join("");
+      if (current && employees.some(e => e.id === current)) sel.value = current;
+    }
+
+    window.renderEspelho = function() {
+      const empId = document.getElementById("filterEmp").value;
+      const monthStr = document.getElementById("filterMonth").value;
+      const tbody = document.getElementById("espelhoBody");
+      const emp = employees.find(e => e.id === empId);
+
+      if (!emp || !monthStr) {
+        tbody.innerHTML = `<tr><td colspan="4">Selecione uma funcionária e mês.</td></tr>`;
+        return;
+      }
+
+      const [year, month] = monthStr.split("-").map(Number);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const weekNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+      let totalWorked = 0;
+      let totalExpected = 0;
+      let html = "";
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const dt = new Date(year, month - 1, d);
+        const wName = weekNames[dt.getDay()];
+        const rec = records[`${emp.id}_${dateStr}`];
+        const info = calculateDayMetrics(emp, dateStr, rec);
+
+        totalWorked += info.workedMins;
+        totalExpected += info.expectedMins;
+
+        let rowClass = "";
+        if (info.type === "domingo") rowClass = "sunday-row";
+        else if (info.type === "feriado") rowClass = "holiday-row";
+        else if (info.type === "falta") rowClass = "absence-row";
+        else if (info.type === "folga" || info.type === "ferias") rowClass = "off-row";
+
+        const balClass = info.balanceMins > 0 ? "pos" : (info.balanceMins < 0 ? "neg" : "");
+
+        html += `
+          <tr class="${rowClass}" style="cursor:pointer;" onclick="openEditDayModal('${dateStr}')">
+            <td><strong>${String(d).padStart(2, "0")}</strong> <small>(${wName})</small></td>
+            <td>${info.label}</td>
+            <td>${info.workedMins > 0 ? minutesToTime(info.workedMins) : "-"}</td>
+            <td class="${balClass}">${info.expectedMins > 0 || info.workedMins > 0 ? minutesToTime(info.balanceMins, true) : "-"}</td>
+          </tr>
+        `;
+      }
+
+      tbody.innerHTML = html;
+      const netBalance = totalWorked - totalExpected;
+      document.getElementById("kpiWorked").textContent = minutesToTime(totalWorked);
+      document.getElementById("kpiExpected").textContent = minutesToTime(totalExpected);
+      const balEl = document.getElementById("kpiBalance");
+      balEl.textContent = minutesToTime(netBalance, true);
+      balEl.className = `kpi-val ${netBalance >= 0 ? "pos" : "neg"}`;
+    };
+
+    // Modal de Lançamento / Edição Admin
+    window.openEditDayModal = function(dateStr) {
+      if (!isAdminUnlocked) {
+        showToast("Acesso restrito ao administrador.");
+        return;
+      }
+      const empId = document.getElementById("filterEmp").value;
+      if (!empId) {
+        showToast("Cadastre uma funcionária primeiro.");
+        return;
+      }
+      document.getElementById("editDate").value = dateStr || getTodayStr();
+      loadDayIntoModal();
+      document.getElementById("modalEditDay").classList.add("open");
+    };
+
+    window.loadDayIntoModal = function() {
+      const empId = document.getElementById("filterEmp").value;
+      const dateStr = document.getElementById("editDate").value;
+      const rec = records[`${empId}_${dateStr}`] || {};
+
+      document.getElementById("editStatus").value = rec.status || "normal";
+      document.getElementById("editEntrada").value = rec.entrada || "";
+      document.getElementById("editSaidaAlmoco").value = rec.saidaAlmoco || "";
+      document.getElementById("editVoltaAlmoco").value = rec.voltaAlmoco || "";
+      document.getElementById("editSaida").value = rec.saida || "";
+      document.getElementById("editHolidayName").value = rec.holidayName || "";
+
+      const knownReasons = ["Falta Injustificada", "Atestado Médico", "Consulta / Exame"];
+      if (rec.absenceReason) {
+        if (knownReasons.includes(rec.absenceReason)) {
+          document.getElementById("absenceReasonSelect").value = rec.absenceReason;
+          document.getElementById("absenceReasonCustom").value = "";
+        } else {
+          document.getElementById("absenceReasonSelect").value = "Outro";
+          document.getElementById("absenceReasonCustom").value = rec.absenceReason;
+        }
+      } else {
+        document.getElementById("absenceReasonSelect").value = "Falta Injustificada";
+        document.getElementById("absenceReasonCustom").value = "";
+      }
+
+      toggleStatusFields();
+      toggleCustomAbsence();
+    };
+
+    window.toggleStatusFields = function() {
+      const st = document.getElementById("editStatus").value;
+      document.getElementById("timeInputsGroup").classList.toggle("hidden", st !== "normal");
+      document.getElementById("absenceReasonGroup").classList.toggle("hidden", st !== "falta");
+      document.getElementById("holidayDescGroup").classList.toggle("hidden", st !== "feriado");
+    };
+
+    window.toggleCustomAbsence = function() {
+      const sel = document.getElementById("absenceReasonSelect").value;
+      document.getElementById("absenceReasonCustom").classList.toggle("hidden", sel !== "Outro");
+    };
+
+    window.saveDayRecord = async function() {
+      if (!isAdminUnlocked) return;
+      const empId = document.getElementById("filterEmp").value;
+      const emp = employees.find(e => e.id === empId);
+      const dateStr = document.getElementById("editDate").value;
+      const status = document.getElementById("editStatus").value;
+
+      if (!emp || !dateStr) return;
+
+      let absenceReason = "";
+      if (status === "falta") {
+        const sel = document.getElementById("absenceReasonSelect").value;
+        absenceReason = sel === "Outro"
+          ? document.getElementById("absenceReasonCustom").value.trim()
+          : sel;
+        if (!absenceReason) {
+          showToast("Informe o motivo da falta.");
+          return;
+        }
+      }
+
+      const payload = {
+        empId: emp.id,
+        empName: emp.name,
+        date: dateStr,
+        status,
+        absenceReason,
+        holidayName: status === "feriado" ? document.getElementById("editHolidayName").value.trim() : "",
+        entrada: status === "normal" ? document.getElementById("editEntrada").value : "",
+        saidaAlmoco: status === "normal" ? document.getElementById("editSaidaAlmoco").value : "",
+        voltaAlmoco: status === "normal" ? document.getElementById("editVoltaAlmoco").value : "",
+        saida: status === "normal" ? document.getElementById("editSaida").value : "",
+        editedByAdmin: true,
+        updatedAt: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, "records", `${emp.id}_${dateStr}`), payload);
+      closeModal("modalEditDay");
+      showToast("Registro atualizado!");
+    };
+
+    window.deleteDayRecord = async function() {
+      if (!isAdminUnlocked) return;
+      const empId = document.getElementById("filterEmp").value;
+      const dateStr = document.getElementById("editDate").value;
+      await deleteDoc(doc(db, "records", `${empId}_${dateStr}`));
+      closeModal("modalEditDay");
+      showToast("Dia limpo.");
+    };
+
+    // Equipe e Fichas
+    function renderStaffList() {
+      const list = document.getElementById("staffList");
+      if (employees.length === 0) {
+        list.innerHTML = `<p style="color:var(--muted);font-size:13px;">Nenhuma funcionária cadastrada ainda.</p>`;
+        return;
+      }
+
+      list.innerHTML = employees.map(emp => {
+        const examStatus = checkExamStatus(emp.lastExam);
+        return `
+          <div class="staff-item" onclick="openEmpDossier('${emp.id}')">
+            <div>
+              <div style="font-weight:700;font-size:15px;">${emp.name}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:2px;">${emp.role || "Sem função"} • ${emp.phone || ""}</div>
+            </div>
+            <div style="text-align:right;">
+              <span class="exam-badge ${examStatus.ok ? "exam-ok" : "exam-warn"}">${examStatus.label}</span>
+              <div style="font-size:11px;color:var(--primary);margin-top:4px;">Abrir ficha ›</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function checkExamStatus(lastExamIso) {
+      if (!lastExamIso) return { ok: false, label: "Exame pendente" };
+      const [y, m, d] = lastExamIso.split("-").map(Number);
+      const examDate = new Date(y, m - 1, d);
+      const diffDays = (new Date() - examDate) / (1000 * 60 * 60 * 24);
+      if (diffDays > 365) return { ok: false, label: "Exame vencido" };
+      return { ok: true, label: "Exame em dia" };
+    }
+
+    window.openEmpFormModal = function(emp = null) {
+      document.getElementById("empModalTitle").textContent = emp ? "Editar Funcionária" : "Cadastrar Funcionária";
+      document.getElementById("empEditId").value = emp ? emp.id : "";
+      document.getElementById("empFullName").value = emp ? emp.name : "";
+      document.getElementById("empPhone").value = emp ? emp.phone : "";
+      document.getElementById("empRole").value = emp ? emp.role : "";
+      document.getElementById("empAdmission").value = emp ? emp.admission : "";
+      document.getElementById("empLastExam").value = emp ? (emp.lastExam || "") : "";
+      document.getElementById("empLoadWeek").value = emp ? (emp.loadWeek || "08:00") : "08:00";
+      document.getElementById("empLoadSat").value = emp ? (emp.loadSat || "04:00") : "04:00";
+      document.getElementById("modalEmpForm").classList.add("open");
+    };
+
+    window.maskPhone = function(input) {
+      let v = input.value.replace(/\D/g, "").slice(0, 11);
+      if (v.length > 6) v = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+      else if (v.length > 2) v = `(${v.slice(0,2)}) ${v.slice(2)}`;
+      input.value = v;
+    };
+
+    window.saveEmployee = async function() {
+      const id = document.getElementById("empEditId").value || `emp_${Date.now()}`;
+      const name = document.getElementById("empFullName").value.trim();
+      const phone = document.getElementById("empPhone").value.trim();
+      const role = document.getElementById("empRole").value.trim();
+      const admission = document.getElementById("empAdmission").value;
+      const lastExam = document.getElementById("empLastExam").value;
+      const loadWeek = document.getElementById("empLoadWeek").value || "08:00";
+      const loadSat = document.getElementById("empLoadSat").value || "00:00";
+
+      if (!name || !role) {
+        showToast("Preencha pelo menos nome completo e função.");
+        return;
+      }
+
+      const existing = employees.find(e => e.id === id);
+      const payload = {
+        name,
+        phone,
+        role,
+        admission,
+        lastExam,
+        loadWeek,
+        loadSat,
+        observations: existing?.observations || []
+      };
+
+      await setDoc(doc(db, "employees", id), payload, { merge: true });
+      closeModal("modalEmpForm");
+      showToast("Funcionária salva!");
+    };
+
+    // Ficha Individual da Funcionária
+    window.openEmpDossier = function(empId) {
+      currentDossierEmpId = empId;
+      renderDossierModal(empId);
+      document.getElementById("modalEmpDossier").classList.add("open");
+    };
+
+    function renderDossierModal(empId) {
+      const emp = employees.find(e => e.id === empId);
+      if (!emp) return;
+
+      document.getElementById("dossierName").textContent = emp.name;
+      const examInfo = checkExamStatus(emp.lastExam);
+
+      document.getElementById("dossierDetails").innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+          <div><strong>Função:</strong><br>${emp.role || "-"}</div>
+          <div><strong>Celular:</strong><br>${emp.phone || "-"}</div>
+          <div><strong>Admissão:</strong><br>${formatDateBR(emp.admission)}</div>
+          <div><strong>Último Exame Periódico:</strong><br>${formatDateBR(emp.lastExam)} <span class="exam-badge ${examInfo.ok ? "exam-ok" : "exam-warn"}">${examInfo.label}</span></div>
+          <div><strong>Carga Seg a Sex:</strong><br>${emp.loadWeek || "08:00"} / dia</div>
+          <div><strong>Carga Sábado:</strong><br>${emp.loadSat || "00:00"} / dia</div>
+        </div>
+      `;
+
+      const obsList = (emp.observations || []).slice().reverse();
+      document.getElementById("obsCountBadge").textContent = `${obsList.length} registro(s)`;
+
+      if (obsList.length === 0) {
+        document.getElementById("dossierObsList").innerHTML = `<p style="color:var(--muted);font-size:13px;">Nenhuma observação registrada.</p>`;
+      } else {
+        document.getElementById("dossierObsList").innerHTML = obsList.map((o, idx) => {
+          const originalIdx = emp.observations.length - 1 - idx;
+          return `
+            <div class="obs-card">
+              <div class="obs-date">
+                <span>📅 Adicionada em ${o.createdAtBR}</span>
+                <span style="color:var(--danger);cursor:pointer;" onclick="deleteObservation(${originalIdx})">Apagar</span>
+              </div>
+              <div>${o.text}</div>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    window.editCurrentDossierEmp = function() {
+      const emp = employees.find(e => e.id === currentDossierEmpId);
+      if (emp) openEmpFormModal(emp);
+    };
+
+    window.deleteCurrentDossierEmp = async function() {
+      if (!currentDossierEmpId) return;
+      if (!confirm("Deseja realmente excluir esta funcionária?")) return;
+      await deleteDoc(doc(db, "employees", currentDossierEmpId));
+      closeModal("modalEmpDossier");
+      showToast("Funcionária excluída.");
+    };
+
+    window.addEmployeeObservation = async function() {
+      const text = document.getElementById("newObsText").value.trim();
+      if (!text || !currentDossierEmpId) {
+        showToast("Digite uma observação primeiro.");
+        return;
+      }
+      const emp = employees.find(e => e.id === currentDossierEmpId);
+      const now = new Date();
+      const createdAtBR = `${now.toLocaleDateString("pt-BR")} às ${now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+
+      const updatedObs = [
+        ...(emp.observations || []),
+        { text, createdAtBR, createdAtISO: now.toISOString() }
+      ];
+
+      await setDoc(doc(db, "employees", emp.id), { observations: updatedObs }, { merge: true });
+      document.getElementById("newObsText").value = "";
+      showToast("Observação adicionada!");
+    };
+
+    window.deleteObservation = async function(index) {
+      const emp = employees.find(e => e.id === currentDossierEmpId);
+      if (!emp) return;
+      const updatedObs = (emp.observations || []).filter((_, i) => i !== index);
+      await setDoc(doc(db, "employees", emp.id), { observations: updatedObs }, { merge: true });
+      showToast("Observação removida.");
+    };
+
+    // Feriados Customizados
+    window.addHoliday = async function() {
+      const dt = document.getElementById("holidayDate").value;
+      const name = document.getElementById("holidayName").value.trim();
+      if (!dt || !name) {
+        showToast("Preencha data e descrição do feriado.");
+        return;
+      }
+      await setDoc(doc(db, "holidays", dt), { name });
+      document.getElementById("holidayDate").value = "";
+      document.getElementById("holidayName").value = "";
+      showToast("Feriado cadastrado!");
+    };
+
+    function renderHolidayList() {
+      const container = document.getElementById("holidayList");
+      const entries = Object.entries(holidays).sort((a, b) => a[0].localeCompare(b[0]));
+      if (entries.length === 0) {
+        container.innerHTML = `<p style="font-size:12px;color:var(--muted);">Feriados nacionais fixos já são reconhecidos automaticamente. Use o campo acima para feriados municipais ou pontos facultativos.</p>`;
+        return;
+      }
+      container.innerHTML = entries.map(([dt, name]) => `
+        <div class="feed-item">
+          <span><strong>${formatDateBR(dt)}</strong> — ${name}</span>
+          <button class="btn btn-danger btn-sm" onclick="removeHoliday('${dt}')">Excluir</button>
+        </div>
+      `).join("");
+    }
+
+    window.removeHoliday = async function(dt) {
+      await deleteDoc(doc(db, "holidays", dt));
+      showToast("Feriado removido.");
+    };
+
+    // Relatório Mensal Completo
+    window.abrirRelatorioMensal = function() {
+      const empId = document.getElementById("filterEmp").value;
+      const monthStr = document.getElementById("filterMonth").value;
+      const emp = employees.find(e => e.id === empId);
+      if (!emp || !monthStr) return;
+
+      const [year, month] = monthStr.split("-").map(Number);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const weekNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+      const monthName = new Date(year, month - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
+      let totalWorked = 0;
+      let totalExpected = 0;
+      let totalFaltas = 0;
+      lastGeneratedReportRows = [];
+
+      let rowsHtml = "";
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const dt = new Date(year, month - 1, d);
+        const wName = weekNames[dt.getDay()];
+        const rec = records[`${emp.id}_${dateStr}`];
+        const info = calculateDayMetrics(emp, dateStr, rec);
+
+        totalWorked += info.workedMins;
+        totalExpected += info.expectedMins;
+        if (info.type === "falta") totalFaltas++;
+
+        const e1 = rec?.entrada || "-";
+        const s1 = rec?.saidaAlmoco || "-";
+        const e2 = rec?.voltaAlmoco || "-";
+        const s2 = rec?.saida || "-";
+        const obsDia = info.type === "normal" ? "Normal" : info.label;
+
+        lastGeneratedReportRows.push({
+          Data: formatDateBR(dateStr),
+          DiaSemana: wName,
+          Situacao: obsDia,
+          Entrada: e1,
+          SaidaIntervalo: s1,
+          VoltaIntervalo: e2,
+          Saida: s2,
+          Trabalhado: info.workedMins > 0 ? minutesToTime(info.workedMins) : "00:00",
+          Saldo: minutesToTime(info.balanceMins, true)
+        });
+
+        rowsHtml += `
+          <tr>
+            <td>${String(d).padStart(2, "0")}/${String(month).padStart(2, "0")}</td>
+            <td>${wName}</td>
+            <td>${info.type === "normal" ? `${e1} | ${s1} | ${e2} | ${s2}` : `<strong>${obsDia}</strong>`}</td>
+            <td>${info.workedMins > 0 ? minutesToTime(info.workedMins) : "-"}</td>
+            <td>${minutesToTime(info.balanceMins, true)}</td>
+          </tr>
+        `;
+      }
+
+      const obsEmpHtml = (emp.observations || []).length > 0
+        ? (emp.observations || []).map(o => `<li><strong>${o.createdAtBR}:</strong> ${o.text}</li>`).join("")
+        : `<li>Nenhuma observação registrada na ficha.</li>`;
+
+      const saldoFinal = totalWorked - totalExpected;
+
+      document.getElementById("reportPrintableArea").innerHTML = `
+        <div style="border-bottom:2px solid #1c1c1e;padding-bottom:10px;margin-bottom:12px;">
+          <h2 style="margin:0 0 4px;font-size:18px;text-transform:uppercase;">Espelho de Ponto Mensal — ${monthName}</h2>
+          <div style="font-size:13px;line-height:1.5;">
+            <strong>Funcionária:</strong> ${emp.name} &nbsp;|&nbsp; <strong>Função:</strong> ${emp.role || "-"}<br>
+            <strong>Admissão:</strong> ${formatDateBR(emp.admission)} &nbsp;|&nbsp; <strong>Último Exame Periódico:</strong> ${formatDateBR(emp.lastExam)}<br>
+            <strong>Jornada Padrão:</strong> Seg–Sex (${emp.loadWeek || "08:00"}) | Sáb (${emp.loadSat || "00:00"})
+          </div>
+        </div>
+
+        <table style="font-size:11px;margin-bottom:14px;">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Dia</th>
+              <th>Horários / Ocorrência</th>
+              <th>Total</th>
+              <th>Saldo</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+
+        <div style="background:#f2f2f7;padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px;">
+          <strong>Resumo do Mês:</strong>
+          Trabalhado: <strong>${minutesToTime(totalWorked)}</strong> &nbsp;|&nbsp;
+          Previsto: <strong>${minutesToTime(totalExpected)}</strong> &nbsp;|&nbsp;
+          Saldo Final: <strong>${minutesToTime(saldoFinal, true)}</strong> &nbsp;|&nbsp;
+          Faltas: <strong>${totalFaltas}</strong>
+        </div>
+
+        <div style="font-size:12px;margin-bottom:24px;">
+          <strong>Observações da Ficha:</strong>
+          <ul style="margin:6px 0 0;padding-left:18px;">${obsEmpHtml}</ul>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:32px;font-size:12px;text-align:center;">
+          <div style="border-top:1px solid #333;padding-top:6px;">Assinatura do Empregador</div>
+          <div style="border-top:1px solid #333;padding-top:6px;">Assinatura: ${emp.name}</div>
+        </div>
+      `;
+
+      document.getElementById("modalMonthlyReport").classList.add("open");
+    };
+
+    window.exportReportCSV = function() {
+      if (!lastGeneratedReportRows.length) return;
+      const empId = document.getElementById("filterEmp").value;
+      const emp = employees.find(e => e.id === empId);
+      const monthStr = document.getElementById("filterMonth").value;
+
+      const headers = ["Data", "Dia da Semana", "Situacao", "Entrada", "Saida Intervalo", "Volta Intervalo", "Saida", "Trabalhado", "Saldo"];
+      const csvLines = [
+        headers.join(";"),
+        ...lastGeneratedReportRows.map(r => [
+          r.Data, r.DiaSemana, r.Situacao, r.Entrada, r.SaidaIntervalo, r.VoltaIntervalo, r.Saida, r.Trabalhado, r.Saldo
+        ].join(";"))
+      ];
+
+      const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ponto_${(emp?.name || "funcionaria").replace(/\s+/g, "_")}_${monthStr}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    window.closeModal = function(id) {
+      document.getElementById(id).classList.remove("open");
+    };
+  </script>
+</body>
+</html>
