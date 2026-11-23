@@ -262,7 +262,7 @@
       align-items: center;
       gap: 4px;
       cursor: pointer;
-      padding: 4px 16px;
+      padding: 4px 10px;
     }
 
     .nav-btn.active { color: var(--primary); }
@@ -413,7 +413,7 @@
     .pos { color: var(--success); }
     .neg { color: var(--danger); }
 
-    /* Tabela Espelho */
+    /* Tabela Espelho e Kátia */
     .table-wrap { overflow-x: auto; }
     table {
       width: 100%;
@@ -438,6 +438,41 @@
     tr.holiday-row { background: #fff8e1; }
     tr.absence-row { background: #ffebee; }
     tr.off-row { background: #f3e5f5; }
+
+    .katia-emp-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #fff;
+    }
+
+    .katia-emp-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .katia-emp-name {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .katia-emp-times {
+      font-size: 13px;
+      color: #3a3a3c;
+      margin-bottom: 6px;
+    }
+
+    .katia-emp-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
 
     /* Lista Equipe */
     .staff-item {
@@ -609,7 +644,63 @@
     </div>
   </main>
 
-  <!-- ABA 2: PAINEL DO GESTOR (PROTEGIDA POR PIN) -->
+  <!-- ABA 2: KÁTIA (RELATÓRIO DIÁRIO PROTEGIDO POR PIN) -->
+  <main id="tabKatia" class="container hidden">
+    <div id="katiaPinScreen" class="card pin-box">
+      <div style="font-size:32px;margin-bottom:8px;">🔐</div>
+      <h2 style="margin:0 0 6px;font-size:18px;">Relatório Kátia</h2>
+      <p style="margin:0;font-size:13px;color:var(--muted);">Digite o PIN de 4 dígitos para visualizar</p>
+      <div class="pin-dots" id="katiaPinDots">
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+      </div>
+      <div class="keypad">
+        <button class="key-btn" onclick="pressKatiaPin('1')">1</button>
+        <button class="key-btn" onclick="pressKatiaPin('2')">2</button>
+        <button class="key-btn" onclick="pressKatiaPin('3')">3</button>
+        <button class="key-btn" onclick="pressKatiaPin('4')">4</button>
+        <button class="key-btn" onclick="pressKatiaPin('5')">5</button>
+        <button class="key-btn" onclick="pressKatiaPin('6')">6</button>
+        <button class="key-btn" onclick="pressKatiaPin('7')">7</button>
+        <button class="key-btn" onclick="pressKatiaPin('8')">8</button>
+        <button class="key-btn" onclick="pressKatiaPin('9')">9</button>
+        <button class="key-btn" style="font-size:14px;" onclick="clearKatiaPin()">Limpar</button>
+        <button class="key-btn" onclick="pressKatiaPin('0')">0</button>
+        <button class="key-btn" style="font-size:18px;" onclick="backspaceKatiaPin()">⌫</button>
+      </div>
+    </div>
+
+    <div id="katiaContent" class="hidden">
+      <div class="card">
+        <div class="card-title">
+          <span>Relatório Diário — Kátia</span>
+          <button class="btn btn-light btn-sm" onclick="lockKatia()">Bloquear</button>
+        </div>
+        <div class="form-group">
+          <label>Data Selecionada (Hoje ou Dia Anterior)</label>
+          <input type="date" id="katiaDateInput" onchange="renderKatiaReport()" />
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-light btn-sm" style="flex:1;" onclick="stepKatiaDate(-1)">‹ Dia Anterior</button>
+          <button class="btn btn-primary btn-sm" style="flex:1;" onclick="setKatiaToday()">Hoje</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Funcionárias no Dia</span>
+          <span id="katiaDateFormatted" style="font-size:12px;color:var(--primary);"></span>
+        </div>
+        <div id="katiaReportList">
+          <p style="color:var(--muted);font-size:13px;">Carregando...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ABA 3: PAINEL DO GESTOR (PROTEGIDA POR PIN) -->
   <main id="tabGestor" class="container hidden">
     <!-- Tela de Bloqueio PIN -->
     <div id="pinScreen" class="card pin-box">
@@ -756,6 +847,10 @@
     <button class="nav-btn active" id="navPonto" onclick="switchMainTab('ponto')">
       <span class="nav-icon">⏱️</span>
       <span>Cartão de Ponto</span>
+    </button>
+    <button class="nav-btn" id="navKatia" onclick="switchMainTab('katia')">
+      <span class="nav-icon">📋</span>
+      <span>Kátia</span>
     </button>
     <button class="nav-btn" id="navGestor" onclick="switchMainTab('gestor')">
       <span class="nav-icon">📊</span>
@@ -929,7 +1024,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
-      getFirestore, collection, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, orderBy
+      getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -953,7 +1048,9 @@
     let currentDossierEmpId = null;
     let adminPin = "1234";
     let pinBuffer = "";
+    let katiaPinBuffer = "";
     let isAdminUnlocked = false;
+    let isKatiaUnlocked = false;
     let lastGeneratedReportRows = [];
 
     // Feriados Nacionais Fixos Padrão
@@ -971,8 +1068,7 @@
 
     // Utilitários de Data e Hora
     function getTodayStr() {
-      const now = new Date();
-      return formatDateISO(now);
+      return formatDateISO(new Date());
     }
 
     function formatDateISO(d) {
@@ -1028,13 +1124,13 @@
     // Inicializar filtros
     const now = new Date();
     document.getElementById("filterMonth").value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    document.getElementById("katiaDateInput").value = getTodayStr();
 
     // Listeners Firebase em Tempo Real
     function initRealtimeSync() {
       const badge = document.getElementById("syncBadge");
       const syncText = document.getElementById("syncText");
 
-      // Config / PIN
       onSnapshot(doc(db, "config", "settings"), (snap) => {
         if (snap.exists() && snap.data().pin) {
           adminPin = String(snap.data().pin);
@@ -1047,7 +1143,6 @@
         syncText.textContent = "Erro Firebase";
       });
 
-      // Funcionárias
       onSnapshot(collection(db, "employees"), (snap) => {
         employees = [];
         snap.forEach((d) => employees.push({ id: d.id, ...d.data() }));
@@ -1060,10 +1155,10 @@
         renderStaffList();
         populateEmpFilter();
         renderEspelho();
+        renderKatiaReport();
         if (currentDossierEmpId) renderDossierModal(currentDossierEmpId);
       });
 
-      // Registros de Ponto
       onSnapshot(collection(db, "records"), (snap) => {
         records = {};
         snap.forEach((d) => { records[d.id] = d.data(); });
@@ -1071,14 +1166,15 @@
         renderPunchButtons();
         renderTodayFeed();
         renderEspelho();
+        renderKatiaReport();
       });
 
-      // Feriados Customizados
       onSnapshot(collection(db, "holidays"), (snap) => {
         holidays = {};
         snap.forEach((d) => { holidays[d.id] = d.data().name; });
         renderHolidayList();
         renderEspelho();
+        renderKatiaReport();
       });
     }
 
@@ -1087,9 +1183,16 @@
     // Navegação Principal
     window.switchMainTab = function(tab) {
       document.getElementById("tabPonto").classList.toggle("hidden", tab !== "ponto");
+      document.getElementById("tabKatia").classList.toggle("hidden", tab !== "katia");
       document.getElementById("tabGestor").classList.toggle("hidden", tab !== "gestor");
+
       document.getElementById("navPonto").classList.toggle("active", tab === "ponto");
+      document.getElementById("navKatia").classList.toggle("active", tab === "katia");
       document.getElementById("navGestor").classList.toggle("active", tab === "gestor");
+
+      if (tab === "katia" && isKatiaUnlocked) {
+        renderKatiaReport();
+      }
     };
 
     window.switchSubTab = function(sub, btn) {
@@ -1098,6 +1201,104 @@
       document.getElementById("subEspelho").classList.toggle("hidden", sub !== "espelho");
       document.getElementById("subEquipe").classList.toggle("hidden", sub !== "equipe");
       document.getElementById("subAjustes").classList.toggle("hidden", sub !== "ajustes");
+    };
+
+    // PIN da Aba Kátia
+    window.pressKatiaPin = function(num) {
+      if (katiaPinBuffer.length >= 4) return;
+      katiaPinBuffer += num;
+      updateKatiaPinDots();
+      if (katiaPinBuffer.length === 4) {
+        if (katiaPinBuffer === adminPin) {
+          isKatiaUnlocked = true;
+          document.getElementById("katiaPinScreen").classList.add("hidden");
+          document.getElementById("katiaContent").classList.remove("hidden");
+          katiaPinBuffer = "";
+          updateKatiaPinDots();
+          renderKatiaReport();
+        } else {
+          showToast("PIN incorreto!");
+          setTimeout(() => { katiaPinBuffer = ""; updateKatiaPinDots(); }, 350);
+        }
+      }
+    };
+
+    window.clearKatiaPin = function() { katiaPinBuffer = ""; updateKatiaPinDots(); };
+    window.backspaceKatiaPin = function() { katiaPinBuffer = katiaPinBuffer.slice(0, -1); updateKatiaPinDots(); };
+
+    function updateKatiaPinDots() {
+      const dots = document.querySelectorAll("#katiaPinDots .pin-dot");
+      dots.forEach((d, i) => d.classList.toggle("filled", i < katiaPinBuffer.length));
+    }
+
+    window.lockKatia = function() {
+      isKatiaUnlocked = false;
+      document.getElementById("katiaPinScreen").classList.remove("hidden");
+      document.getElementById("katiaContent").classList.add("hidden");
+    };
+
+    window.setKatiaToday = function() {
+      document.getElementById("katiaDateInput").value = getTodayStr();
+      renderKatiaReport();
+    };
+
+    window.stepKatiaDate = function(deltaDays) {
+      const input = document.getElementById("katiaDateInput");
+      const currentVal = input.value || getTodayStr();
+      const [y, m, d] = currentVal.split("-").map(Number);
+      const dt = new Date(y, m - 1, d + deltaDays);
+      input.value = formatDateISO(dt);
+      renderKatiaReport();
+    };
+
+    window.renderKatiaReport = function() {
+      if (!isKatiaUnlocked) return;
+      const dateStr = document.getElementById("katiaDateInput").value || getTodayStr();
+      const listEl = document.getElementById("katiaReportList");
+      const dateLbl = document.getElementById("katiaDateFormatted");
+
+      const [y, m, d] = dateStr.split("-").map(Number);
+      const dt = new Date(y, m - 1, d);
+      const wName = dt.toLocaleDateString("pt-BR", { weekday: "short" });
+      dateLbl.textContent = `${formatDateBR(dateStr)} (${wName})`;
+
+      if (employees.length === 0) {
+        listEl.innerHTML = `<p style="color:var(--muted);font-size:13px;">Nenhuma funcionária cadastrada.</p>`;
+        return;
+      }
+
+      listEl.innerHTML = employees.map(emp => {
+        const rec = records[`${emp.id}_${dateStr}`];
+        const info = calculateDayMetrics(emp, dateStr, rec);
+
+        const e1 = rec?.entrada || "--:--";
+        const s1 = rec?.saidaAlmoco || "--:--";
+        const e2 = rec?.voltaAlmoco || "--:--";
+        const s2 = rec?.saida || "--:--";
+
+        let horariosDetalhe = `Ent: <strong>${e1}</strong> • Int: <strong>${s1} - ${e2}</strong> • Saí: <strong>${s2}</strong>`;
+        if (info.type !== "normal") {
+          horariosDetalhe = `<strong>${info.label}</strong>`;
+        }
+
+        const hasBalance = info.expectedMins > 0 || info.workedMins > 0;
+        const saldoText = hasBalance ? minutesToTime(info.balanceMins, true) : "00:00";
+        const saldoClass = info.balanceMins > 0 ? "pos" : (info.balanceMins < 0 ? "neg" : "");
+
+        return `
+          <div class="katia-emp-card">
+            <div class="katia-emp-header">
+              <span class="katia-emp-name">${emp.name}</span>
+              <span class="${saldoClass}" style="font-weight:700;font-size:14px;">Saldo: ${saldoText}</span>
+            </div>
+            <div class="katia-emp-times">${horariosDetalhe}</div>
+            <div class="katia-emp-footer">
+              <span>${emp.role || "Equipe"}</span>
+              <span>Trabalhado: <strong>${minutesToTime(info.workedMins)}</strong> / Previsto: ${minutesToTime(info.expectedMins)}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
     };
 
     // PIN do Gestor
@@ -1225,7 +1426,6 @@
       const docId = `${emp.id}_${today}`;
       const existing = records[docId] || {};
 
-      // Funcionária não pode sobrescrever batida já registrada (somente admin altera)
       if (existing[tipo]) {
         showToast("Este horário já foi registrado. Peça ao gestor se precisar alterar.");
         return;
@@ -1281,7 +1481,7 @@
     function calculateDayMetrics(emp, dateStr, rec) {
       const [y, m, d] = dateStr.split("-").map(Number);
       const dt = new Date(y, m - 1, d);
-      const dayOfWeek = dt.getDay(); // 0 = Domingo, 6 = Sábado
+      const dayOfWeek = dt.getDay();
       const mmdd = `${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
       const customHolidayName = holidays[dateStr];
@@ -1299,7 +1499,6 @@
         expectedMins = timeToMinutes(emp.loadWeek || "08:00");
       }
 
-      // Status especiais
       const status = rec?.status || (holidayTitle ? "feriado" : "normal");
 
       if (dayOfWeek === 0 && (!rec || status === "normal") && !rec?.entrada) {
@@ -1329,7 +1528,6 @@
         };
       }
 
-      // Trabalho normal: calcular períodos
       let workedMins = 0;
       if (rec?.entrada && rec?.saidaAlmoco) {
         workedMins += Math.max(0, timeToMinutes(rec.saidaAlmoco) - timeToMinutes(rec.entrada));
@@ -1344,7 +1542,6 @@
         .filter(Boolean)
         .join(" • ");
 
-      // Se é um dia futuro ou ainda sem batidas em dia útil
       const todayStr = getTodayStr();
       if (!rec || (!rec.entrada && !rec.saida)) {
         if (dateStr >= todayStr) {
