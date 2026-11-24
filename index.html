@@ -455,12 +455,12 @@
     tr.absence-row { background: #ffebee; }
     tr.off-row { background: #f3e5f5; }
 
-    /* Lista clicável da Kátia e Gestor */
+    /* Lista clicável da Kátia e Seletor do Gestor */
     .select-emp-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 13px 14px;
+      padding: 12px 14px;
       border: 1px solid var(--border);
       border-radius: 12px;
       margin-bottom: 8px;
@@ -673,7 +673,6 @@
     </div>
 
     <div id="katiaContent" class="hidden">
-      <!-- Lista das funcionárias -->
       <div id="katiaListCard" class="card">
         <div class="card-title">
           <span>Funcionárias</span>
@@ -684,7 +683,6 @@
         </div>
       </div>
 
-      <!-- Relatório da funcionária selecionada -->
       <div id="katiaReportCard" class="card hidden">
         <div class="card-title">
           <button class="btn btn-light btn-sm" onclick="backToKatiaList()">‹ Lista</button>
@@ -726,7 +724,6 @@
 
   <!-- ABA 3: PAINEL DO GESTOR (PROTEGIDA POR PIN) -->
   <main id="tabGestor" class="container hidden">
-    <!-- Tela de Bloqueio PIN -->
     <div id="pinScreen" class="card pin-box">
       <div style="font-size:32px;margin-bottom:8px;">🔒</div>
       <h2 style="margin:0 0 6px;font-size:18px;">Área Restrita do Gestor</h2>
@@ -753,7 +750,6 @@
       </div>
     </div>
 
-    <!-- Conteúdo Desbloqueado do Gestor -->
     <div id="adminContent" class="hidden">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <span style="font-size:13px;font-weight:700;color:var(--success);">● Modo Administrador Ativo</span>
@@ -769,9 +765,13 @@
       <!-- SUB-ABA 1: ESPELHO E RELATÓRIO MENSAL -->
       <section id="subEspelho">
         <div class="card">
-          <div class="card-title">1. Selecione a Funcionária</div>
-          <div id="gestorEmpList">
-            <p style="color:var(--muted);font-size:13px;">Nenhuma funcionária cadastrada.</p>
+          <label>Funcionária</label>
+          <button type="button" id="btnOpenGestorPicker" class="btn btn-light btn-block" style="justify-content:space-between;" onclick="toggleGestorPicker()">
+            <span id="gestorPickerLabel">Selecionar funcionária...</span>
+            <span>▾</span>
+          </button>
+          <div id="gestorPickerDropdown" class="hidden" style="margin-top:8px;border:1px solid var(--border);border-radius:12px;padding:8px;background:#f9f9fb;">
+            <div id="gestorEmpList"></div>
           </div>
         </div>
 
@@ -1077,10 +1077,9 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Estado Global
     let employees = [];
-    let records = {}; // chave: `${empId}_${YYYY-MM-DD}`
-    let holidays = {}; // chave: `YYYY-MM-DD` -> nome
+    let records = {};
+    let holidays = {};
     let selectedPontoEmpId = null;
     let selectedGestorEmpId = null;
     let selectedKatiaEmpId = null;
@@ -1092,7 +1091,6 @@
     let isKatiaUnlocked = false;
     let lastGeneratedReportRows = [];
 
-    // Feriados Nacionais Fixos Padrão
     const fixedNationalHolidays = {
       "01-01": "Confraternização Universal",
       "04-21": "Tiradentes",
@@ -1188,6 +1186,7 @@
         }
         if (selectedGestorEmpId && !employees.some(e => e.id === selectedGestorEmpId)) {
           selectedGestorEmpId = null;
+          document.getElementById("gestorSheetSection").classList.add("hidden");
         }
         if (selectedKatiaEmpId && !employees.some(e => e.id === selectedKatiaEmpId)) {
           selectedKatiaEmpId = null;
@@ -1223,7 +1222,6 @@
 
     initRealtimeSync();
 
-    // Navegação Principal
     window.switchMainTab = function(tab) {
       document.getElementById("tabPonto").classList.toggle("hidden", tab !== "ponto");
       document.getElementById("tabKatia").classList.toggle("hidden", tab !== "katia");
@@ -1402,6 +1400,7 @@
 
     window.lockAdmin = function() {
       isAdminUnlocked = false;
+      document.getElementById("gestorPickerDropdown").classList.add("hidden");
       document.getElementById("pinScreen").classList.remove("hidden");
       document.getElementById("adminContent").classList.add("hidden");
     };
@@ -1548,7 +1547,6 @@
       `).join("");
     }
 
-    // Cálculo de Horas de um Dia
     function calculateDayMetrics(emp, dateStr, rec) {
       const [y, m, d] = dateStr.split("-").map(Number);
       const dt = new Date(y, m - 1, d);
@@ -1630,12 +1628,25 @@
       };
     }
 
-    // Painel Gestor: Lista de Funcionárias -> Tabela Editável
+    // Painel Gestor: Botão abre lista -> Seleciona funcionária -> Exibe tabela
+    window.toggleGestorPicker = function() {
+      if (!isAdminUnlocked) return;
+      renderGestorEmpList();
+      document.getElementById("gestorPickerDropdown").classList.toggle("hidden");
+    };
+
     function renderGestorEmpList() {
       const container = document.getElementById("gestorEmpList");
+      const labelEl = document.getElementById("gestorPickerLabel");
       if (!isAdminUnlocked) return;
+
+      const currentEmp = employees.find(e => e.id === selectedGestorEmpId);
+      labelEl.textContent = currentEmp
+        ? `${currentEmp.name} (${currentEmp.role || "Equipe"})`
+        : "Selecionar funcionária...";
+
       if (employees.length === 0) {
-        container.innerHTML = `<p style="color:var(--muted);font-size:13px;">Nenhuma funcionária cadastrada. Vá em "Equipe &amp; Fichas" para adicionar.</p>`;
+        container.innerHTML = `<p style="color:var(--muted);font-size:13px;margin:6px;">Nenhuma funcionária cadastrada. Vá em "Equipe &amp; Fichas" para adicionar.</p>`;
         document.getElementById("gestorSheetSection").classList.add("hidden");
         return;
       }
@@ -1643,12 +1654,12 @@
       container.innerHTML = employees.map(emp => {
         const isAct = emp.id === selectedGestorEmpId;
         return `
-          <div class="select-emp-row ${isAct ? "active-emp" : ""}" onclick="selectGestorEmp('${emp.id}')">
+          <div class="select-emp-row ${isAct ? "active-emp" : ""}" style="margin-bottom:6px;" onclick="selectGestorEmp('${emp.id}')">
             <div>
               <div style="font-weight:700;font-size:14px;">${emp.name}</div>
               <div style="font-size:12px;color:var(--muted);">${emp.role || "Equipe"}</div>
             </div>
-            <span style="font-size:12px;font-weight:600;color:${isAct ? "var(--primary)" : "var(--muted)"};">${isAct ? "Selecionada ✓" : "Abrir tabela ›"}</span>
+            <span style="font-size:12px;font-weight:600;color:${isAct ? "var(--primary)" : "var(--muted)"};">${isAct ? "Selecionada ✓" : "Escolher"}</span>
           </div>
         `;
       }).join("");
@@ -1656,6 +1667,7 @@
 
     window.selectGestorEmp = function(empId) {
       selectedGestorEmpId = empId;
+      document.getElementById("gestorPickerDropdown").classList.add("hidden");
       document.getElementById("gestorSheetSection").classList.remove("hidden");
       renderGestorEmpList();
       renderEspelho();
@@ -1763,7 +1775,6 @@
       showToast(`Dia ${formatDateBR(dateStr)} salvo!`);
     };
 
-    // Modal de Lançamento / Edição Admin (Status Especial)
     window.openEditDayModal = function(dateStr) {
       if (!isAdminUnlocked) {
         showToast("Acesso restrito ao administrador.");
@@ -1956,7 +1967,6 @@
       showToast("Funcionária salva!");
     };
 
-    // Ficha Individual da Funcionária
     window.openEmpDossier = function(empId) {
       currentDossierEmpId = empId;
       renderDossierModal(empId);
