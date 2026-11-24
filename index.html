@@ -85,7 +85,7 @@
     }
 
     .container {
-      max-width: 760px;
+      max-width: 920px;
       margin: 0 auto;
       padding: 16px;
     }
@@ -106,6 +106,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
     }
 
     /* Relógio */
@@ -372,6 +373,20 @@
       border-color: var(--primary);
     }
 
+    .inline-time {
+      width: 82px;
+      padding: 5px 6px;
+      font-size: 12px;
+      border-radius: 7px;
+    }
+
+    .inline-obs {
+      min-width: 150px;
+      padding: 5px 8px;
+      font-size: 12px;
+      border-radius: 7px;
+    }
+
     .btn {
       border: none;
       border-radius: 10px;
@@ -413,7 +428,7 @@
     .pos { color: var(--success); }
     .neg { color: var(--danger); }
 
-    /* Tabela Espelho e Kátia */
+    /* Tabela Espelho */
     .table-wrap { overflow-x: auto; }
     table {
       width: 100%;
@@ -422,10 +437,11 @@
     }
 
     th, td {
-      padding: 9px 6px;
+      padding: 8px 6px;
       border-bottom: 1px solid var(--border);
       text-align: left;
       white-space: nowrap;
+      vertical-align: middle;
     }
 
     th {
@@ -439,39 +455,23 @@
     tr.absence-row { background: #ffebee; }
     tr.off-row { background: #f3e5f5; }
 
-    .katia-emp-card {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-      margin-bottom: 10px;
-      background: #fff;
-    }
-
-    .katia-emp-header {
+    /* Lista clicável da Kátia e Gestor */
+    .select-emp-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 6px;
+      padding: 13px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      background: #fff;
+      cursor: pointer;
+      transition: all 0.15s ease;
     }
 
-    .katia-emp-name {
-      font-weight: 700;
-      font-size: 15px;
-    }
-
-    .katia-emp-times {
-      font-size: 13px;
-      color: #3a3a3c;
-      margin-bottom: 6px;
-    }
-
-    .katia-emp-footer {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      color: var(--muted);
-      padding-top: 6px;
-      border-top: 1px solid var(--border);
+    .select-emp-row.active-emp {
+      border-color: var(--primary);
+      background: #f0f7ff;
     }
 
     /* Lista Equipe */
@@ -644,11 +644,11 @@
     </div>
   </main>
 
-  <!-- ABA 2: KÁTIA (RELATÓRIO DIÁRIO PROTEGIDO POR PIN) -->
+  <!-- ABA 2: KÁTIA (LISTA DE FUNCIONÁRIAS -> RELATÓRIO DE DIAS, HORAS E SALDO) -->
   <main id="tabKatia" class="container hidden">
     <div id="katiaPinScreen" class="card pin-box">
       <div style="font-size:32px;margin-bottom:8px;">🔐</div>
-      <h2 style="margin:0 0 6px;font-size:18px;">Relatório Kátia</h2>
+      <h2 style="margin:0 0 6px;font-size:18px;">Acesso — Kátia</h2>
       <p style="margin:0;font-size:13px;color:var(--muted);">Digite o PIN de 4 dígitos para visualizar</p>
       <div class="pin-dots" id="katiaPinDots">
         <div class="pin-dot"></div>
@@ -673,28 +673,52 @@
     </div>
 
     <div id="katiaContent" class="hidden">
-      <div class="card">
+      <!-- Lista das funcionárias -->
+      <div id="katiaListCard" class="card">
         <div class="card-title">
-          <span>Relatório Diário — Kátia</span>
+          <span>Funcionárias</span>
           <button class="btn btn-light btn-sm" onclick="lockKatia()">Bloquear</button>
         </div>
-        <div class="form-group">
-          <label>Data Selecionada (Hoje ou Dia Anterior)</label>
-          <input type="date" id="katiaDateInput" onchange="renderKatiaReport()" />
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-light btn-sm" style="flex:1;" onclick="stepKatiaDate(-1)">‹ Dia Anterior</button>
-          <button class="btn btn-primary btn-sm" style="flex:1;" onclick="setKatiaToday()">Hoje</button>
+        <div id="katiaEmpList">
+          <p style="color:var(--muted);font-size:13px;">Carregando...</p>
         </div>
       </div>
 
-      <div class="card">
+      <!-- Relatório da funcionária selecionada -->
+      <div id="katiaReportCard" class="card hidden">
         <div class="card-title">
-          <span>Funcionárias no Dia</span>
-          <span id="katiaDateFormatted" style="font-size:12px;color:var(--primary);"></span>
+          <button class="btn btn-light btn-sm" onclick="backToKatiaList()">‹ Lista</button>
+          <span id="katiaSelectedTitle" style="flex:1;text-align:center;">Relatório</span>
+          <input type="month" id="katiaMonthInput" style="width:auto;padding:5px 8px;font-size:12px;" onchange="renderKatiaEmpReport()" />
         </div>
-        <div id="katiaReportList">
-          <p style="color:var(--muted);font-size:13px;">Carregando...</p>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Horas Trabalhadas</div>
+            <div id="katiaKpiWorked" class="kpi-val">00:00</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Horas Previstas</div>
+            <div id="katiaKpiExpected" class="kpi-val">00:00</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Saldo do Mês</div>
+            <div id="katiaKpiBalance" class="kpi-val">00:00</div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Dia</th>
+                <th>Horários / Ocorrência</th>
+                <th>Horas Trab.</th>
+                <th>Saldo do Dia</th>
+              </tr>
+            </thead>
+            <tbody id="katiaReportBody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -745,54 +769,62 @@
       <!-- SUB-ABA 1: ESPELHO E RELATÓRIO MENSAL -->
       <section id="subEspelho">
         <div class="card">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Funcionária</label>
-              <select id="filterEmp" onchange="renderEspelho()"></select>
-            </div>
-            <div class="form-group">
-              <label>Mês de Referência</label>
-              <input type="month" id="filterMonth" onchange="renderEspelho()" />
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-primary" style="flex:1;" onclick="abrirRelatorioMensal()">📄 Gerar Relatório do Mês</button>
-            <button class="btn btn-light" onclick="openEditDayModal()">+ Lançar / Editar Dia</button>
+          <div class="card-title">1. Selecione a Funcionária</div>
+          <div id="gestorEmpList">
+            <p style="color:var(--muted);font-size:13px;">Nenhuma funcionária cadastrada.</p>
           </div>
         </div>
 
-        <div class="kpi-grid">
-          <div class="kpi-card">
-            <div class="kpi-label">Trabalhado</div>
-            <div id="kpiWorked" class="kpi-val">00:00</div>
+        <div id="gestorSheetSection" class="hidden">
+          <div class="card">
+            <div class="card-title">
+              <span id="gestorSelectedEmpName">Espelho da Funcionária</span>
+              <input type="month" id="filterMonth" style="width:auto;padding:6px 10px;font-size:13px;" onchange="renderEspelho()" />
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-primary" style="flex:1;" onclick="abrirRelatorioMensal()">📄 Gerar Relatório do Mês</button>
+              <button class="btn btn-light" onclick="openEditDayModal()">⚙️ Status / Falta / Férias</button>
+            </div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Previsto</div>
-            <div id="kpiExpected" class="kpi-val">00:00</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Saldo</div>
-            <div id="kpiBalance" class="kpi-val">00:00</div>
-          </div>
-        </div>
 
-        <div class="card">
-          <div class="card-title">
-            <span>Registros do Mês</span>
-            <span style="font-size:11px;color:var(--muted);">Toque no dia para editar</span>
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-label">Trabalhado</div>
+              <div id="kpiWorked" class="kpi-val">00:00</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Previsto</div>
+              <div id="kpiExpected" class="kpi-val">00:00</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Saldo</div>
+              <div id="kpiBalance" class="kpi-val">00:00</div>
+            </div>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Dia</th>
-                  <th>Status / Horários</th>
-                  <th>Total</th>
-                  <th>Saldo</th>
-                </tr>
-              </thead>
-              <tbody id="espelhoBody"></tbody>
-            </table>
+
+          <div class="card">
+            <div class="card-title">
+              <span>Lançamentos do Mês (Edição Rápida)</span>
+              <span style="font-size:11px;color:var(--muted);">Altere os campos direto na linha</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Dia</th>
+                    <th>Entrada</th>
+                    <th>Saída Int.</th>
+                    <th>Volta Int.</th>
+                    <th>Saída</th>
+                    <th>Total</th>
+                    <th>Saldo</th>
+                    <th>Obs. do Dia</th>
+                    <th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="espelhoBody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
@@ -858,11 +890,11 @@
     </button>
   </nav>
 
-  <!-- MODAL 1: EDITAR / LANÇAR DIA (SOMENTE ADMIN) -->
+  <!-- MODAL 1: EDITAR / LANÇAR DIA COM STATUS ESPECIAL (SOMENTE ADMIN) -->
   <div id="modalEditDay" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
-        <h3>Lançar / Editar Dia (Admin)</h3>
+        <h3>Lançar / Status do Dia (Admin)</h3>
         <button class="btn btn-light btn-sm" onclick="closeModal('modalEditDay')">Fechar</button>
       </div>
       <div class="form-group">
@@ -917,6 +949,11 @@
             <input type="time" id="editSaida" />
           </div>
         </div>
+      </div>
+
+      <div class="form-group">
+        <label>Observação do Dia</label>
+        <input type="text" id="editDayObs" placeholder="Ex: Trocou turno, saiu mais cedo, etc." />
       </div>
 
       <div style="display:flex;gap:8px;margin-top:12px;">
@@ -1045,6 +1082,8 @@
     let records = {}; // chave: `${empId}_${YYYY-MM-DD}`
     let holidays = {}; // chave: `YYYY-MM-DD` -> nome
     let selectedPontoEmpId = null;
+    let selectedGestorEmpId = null;
+    let selectedKatiaEmpId = null;
     let currentDossierEmpId = null;
     let adminPin = "1234";
     let pinBuffer = "";
@@ -1066,7 +1105,6 @@
       "12-25": "Natal"
     };
 
-    // Utilitários de Data e Hora
     function getTodayStr() {
       return formatDateISO(new Date());
     }
@@ -1110,7 +1148,6 @@
       setTimeout(() => { t.style.display = "none"; }, 2600);
     }
 
-    // Relógio ao vivo
     function updateClock() {
       const now = new Date();
       document.getElementById("liveTime").textContent = now.toLocaleTimeString("pt-BR");
@@ -1121,12 +1158,11 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Inicializar filtros
     const now = new Date();
-    document.getElementById("filterMonth").value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    document.getElementById("katiaDateInput").value = getTodayStr();
+    const currentMonthVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    document.getElementById("filterMonth").value = currentMonthVal;
+    document.getElementById("katiaMonthInput").value = currentMonthVal;
 
-    // Listeners Firebase em Tempo Real
     function initRealtimeSync() {
       const badge = document.getElementById("syncBadge");
       const syncText = document.getElementById("syncText");
@@ -1150,12 +1186,19 @@
         if (!selectedPontoEmpId && employees.length > 0) {
           selectedPontoEmpId = employees[0].id;
         }
+        if (selectedGestorEmpId && !employees.some(e => e.id === selectedGestorEmpId)) {
+          selectedGestorEmpId = null;
+        }
+        if (selectedKatiaEmpId && !employees.some(e => e.id === selectedKatiaEmpId)) {
+          selectedKatiaEmpId = null;
+        }
         renderPontoGrid();
         renderPunchButtons();
         renderStaffList();
-        populateEmpFilter();
+        renderGestorEmpList();
         renderEspelho();
-        renderKatiaReport();
+        renderKatiaEmpList();
+        renderKatiaEmpReport();
         if (currentDossierEmpId) renderDossierModal(currentDossierEmpId);
       });
 
@@ -1166,7 +1209,7 @@
         renderPunchButtons();
         renderTodayFeed();
         renderEspelho();
-        renderKatiaReport();
+        renderKatiaEmpReport();
       });
 
       onSnapshot(collection(db, "holidays"), (snap) => {
@@ -1174,7 +1217,7 @@
         snap.forEach((d) => { holidays[d.id] = d.data().name; });
         renderHolidayList();
         renderEspelho();
-        renderKatiaReport();
+        renderKatiaEmpReport();
       });
     }
 
@@ -1191,7 +1234,8 @@
       document.getElementById("navGestor").classList.toggle("active", tab === "gestor");
 
       if (tab === "katia" && isKatiaUnlocked) {
-        renderKatiaReport();
+        renderKatiaEmpList();
+        if (selectedKatiaEmpId) renderKatiaEmpReport();
       }
     };
 
@@ -1211,11 +1255,13 @@
       if (katiaPinBuffer.length === 4) {
         if (katiaPinBuffer === adminPin) {
           isKatiaUnlocked = true;
+          selectedKatiaEmpId = null;
           document.getElementById("katiaPinScreen").classList.add("hidden");
           document.getElementById("katiaContent").classList.remove("hidden");
           katiaPinBuffer = "";
           updateKatiaPinDots();
-          renderKatiaReport();
+          backToKatiaList();
+          renderKatiaEmpList();
         } else {
           showToast("PIN incorreto!");
           setTimeout(() => { katiaPinBuffer = ""; updateKatiaPinDots(); }, 350);
@@ -1233,72 +1279,96 @@
 
     window.lockKatia = function() {
       isKatiaUnlocked = false;
+      selectedKatiaEmpId = null;
       document.getElementById("katiaPinScreen").classList.remove("hidden");
       document.getElementById("katiaContent").classList.add("hidden");
     };
 
-    window.setKatiaToday = function() {
-      document.getElementById("katiaDateInput").value = getTodayStr();
-      renderKatiaReport();
-    };
-
-    window.stepKatiaDate = function(deltaDays) {
-      const input = document.getElementById("katiaDateInput");
-      const currentVal = input.value || getTodayStr();
-      const [y, m, d] = currentVal.split("-").map(Number);
-      const dt = new Date(y, m - 1, d + deltaDays);
-      input.value = formatDateISO(dt);
-      renderKatiaReport();
-    };
-
-    window.renderKatiaReport = function() {
+    function renderKatiaEmpList() {
       if (!isKatiaUnlocked) return;
-      const dateStr = document.getElementById("katiaDateInput").value || getTodayStr();
-      const listEl = document.getElementById("katiaReportList");
-      const dateLbl = document.getElementById("katiaDateFormatted");
-
-      const [y, m, d] = dateStr.split("-").map(Number);
-      const dt = new Date(y, m - 1, d);
-      const wName = dt.toLocaleDateString("pt-BR", { weekday: "short" });
-      dateLbl.textContent = `${formatDateBR(dateStr)} (${wName})`;
-
+      const el = document.getElementById("katiaEmpList");
       if (employees.length === 0) {
-        listEl.innerHTML = `<p style="color:var(--muted);font-size:13px;">Nenhuma funcionária cadastrada.</p>`;
+        el.innerHTML = `<p style="color:var(--muted);font-size:13px;">Nenhuma funcionária cadastrada.</p>`;
         return;
       }
+      el.innerHTML = employees.map(emp => `
+        <div class="select-emp-row" onclick="selectKatiaEmp('${emp.id}')">
+          <div>
+            <div style="font-weight:700;font-size:15px;">${emp.name}</div>
+            <div style="font-size:12px;color:var(--muted);">${emp.role || "Equipe"}</div>
+          </div>
+          <span style="color:var(--primary);font-size:13px;font-weight:600;">Ver relatório ›</span>
+        </div>
+      `).join("");
+    }
 
-      listEl.innerHTML = employees.map(emp => {
+    window.selectKatiaEmp = function(empId) {
+      selectedKatiaEmpId = empId;
+      document.getElementById("katiaListCard").classList.add("hidden");
+      document.getElementById("katiaReportCard").classList.remove("hidden");
+      renderKatiaEmpReport();
+    };
+
+    window.backToKatiaList = function() {
+      selectedKatiaEmpId = null;
+      document.getElementById("katiaReportCard").classList.add("hidden");
+      document.getElementById("katiaListCard").classList.remove("hidden");
+      renderKatiaEmpList();
+    };
+
+    window.renderKatiaEmpReport = function() {
+      if (!isKatiaUnlocked || !selectedKatiaEmpId) return;
+      const emp = employees.find(e => e.id === selectedKatiaEmpId);
+      const monthStr = document.getElementById("katiaMonthInput").value;
+      if (!emp || !monthStr) return;
+
+      document.getElementById("katiaSelectedTitle").textContent = emp.name;
+
+      const [year, month] = monthStr.split("-").map(Number);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const weekNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+      let totalWorked = 0;
+      let totalExpected = 0;
+      let html = "";
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const dt = new Date(year, month - 1, d);
+        const wName = weekNames[dt.getDay()];
         const rec = records[`${emp.id}_${dateStr}`];
         const info = calculateDayMetrics(emp, dateStr, rec);
 
-        const e1 = rec?.entrada || "--:--";
-        const s1 = rec?.saidaAlmoco || "--:--";
-        const e2 = rec?.voltaAlmoco || "--:--";
-        const s2 = rec?.saida || "--:--";
+        totalWorked += info.workedMins;
+        totalExpected += info.expectedMins;
 
-        let horariosDetalhe = `Ent: <strong>${e1}</strong> • Int: <strong>${s1} - ${e2}</strong> • Saí: <strong>${s2}</strong>`;
-        if (info.type !== "normal") {
-          horariosDetalhe = `<strong>${info.label}</strong>`;
-        }
+        let rowClass = "";
+        if (info.type === "domingo") rowClass = "sunday-row";
+        else if (info.type === "feriado") rowClass = "holiday-row";
+        else if (info.type === "falta") rowClass = "absence-row";
+        else if (info.type === "folga" || info.type === "ferias") rowClass = "off-row";
 
         const hasBalance = info.expectedMins > 0 || info.workedMins > 0;
-        const saldoText = hasBalance ? minutesToTime(info.balanceMins, true) : "00:00";
         const saldoClass = info.balanceMins > 0 ? "pos" : (info.balanceMins < 0 ? "neg" : "");
+        const obsSuffix = rec?.dayObs ? ` • <em>${rec.dayObs}</em>` : "";
 
-        return `
-          <div class="katia-emp-card">
-            <div class="katia-emp-header">
-              <span class="katia-emp-name">${emp.name}</span>
-              <span class="${saldoClass}" style="font-weight:700;font-size:14px;">Saldo: ${saldoText}</span>
-            </div>
-            <div class="katia-emp-times">${horariosDetalhe}</div>
-            <div class="katia-emp-footer">
-              <span>${emp.role || "Equipe"}</span>
-              <span>Trabalhado: <strong>${minutesToTime(info.workedMins)}</strong> / Previsto: ${minutesToTime(info.expectedMins)}</span>
-            </div>
-          </div>
+        html += `
+          <tr class="${rowClass}">
+            <td><strong>${String(d).padStart(2, "0")}</strong> <small>(${wName})</small></td>
+            <td>${info.label}${obsSuffix}</td>
+            <td>${info.workedMins > 0 ? minutesToTime(info.workedMins) : "00:00"}</td>
+            <td class="${saldoClass}"><strong>${hasBalance ? minutesToTime(info.balanceMins, true) : "00:00"}</strong></td>
+          </tr>
         `;
-      }).join("");
+      }
+
+      document.getElementById("katiaReportBody").innerHTML = html;
+      const netBalance = totalWorked - totalExpected;
+      document.getElementById("katiaKpiWorked").textContent = minutesToTime(totalWorked);
+      document.getElementById("katiaKpiExpected").textContent = minutesToTime(totalExpected);
+      const balEl = document.getElementById("katiaKpiBalance");
+      balEl.textContent = minutesToTime(netBalance, true);
+      balEl.className = `kpi-val ${netBalance >= 0 ? "pos" : "neg"}`;
     };
 
     // PIN do Gestor
@@ -1313,6 +1383,7 @@
           document.getElementById("adminContent").classList.remove("hidden");
           pinBuffer = "";
           updatePinDots();
+          renderGestorEmpList();
           renderEspelho();
         } else {
           showToast("PIN incorreto!");
@@ -1559,24 +1630,49 @@
       };
     }
 
-    // Espelho de Ponto
-    function populateEmpFilter() {
-      const sel = document.getElementById("filterEmp");
-      const current = sel.value;
-      sel.innerHTML = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join("");
-      if (current && employees.some(e => e.id === current)) sel.value = current;
-    }
-
-    window.renderEspelho = function() {
-      const empId = document.getElementById("filterEmp").value;
-      const monthStr = document.getElementById("filterMonth").value;
-      const tbody = document.getElementById("espelhoBody");
-      const emp = employees.find(e => e.id === empId);
-
-      if (!emp || !monthStr) {
-        tbody.innerHTML = `<tr><td colspan="4">Selecione uma funcionária e mês.</td></tr>`;
+    // Painel Gestor: Lista de Funcionárias -> Tabela Editável
+    function renderGestorEmpList() {
+      const container = document.getElementById("gestorEmpList");
+      if (!isAdminUnlocked) return;
+      if (employees.length === 0) {
+        container.innerHTML = `<p style="color:var(--muted);font-size:13px;">Nenhuma funcionária cadastrada. Vá em "Equipe &amp; Fichas" para adicionar.</p>`;
+        document.getElementById("gestorSheetSection").classList.add("hidden");
         return;
       }
+
+      container.innerHTML = employees.map(emp => {
+        const isAct = emp.id === selectedGestorEmpId;
+        return `
+          <div class="select-emp-row ${isAct ? "active-emp" : ""}" onclick="selectGestorEmp('${emp.id}')">
+            <div>
+              <div style="font-weight:700;font-size:14px;">${emp.name}</div>
+              <div style="font-size:12px;color:var(--muted);">${emp.role || "Equipe"}</div>
+            </div>
+            <span style="font-size:12px;font-weight:600;color:${isAct ? "var(--primary)" : "var(--muted)"};">${isAct ? "Selecionada ✓" : "Abrir tabela ›"}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    window.selectGestorEmp = function(empId) {
+      selectedGestorEmpId = empId;
+      document.getElementById("gestorSheetSection").classList.remove("hidden");
+      renderGestorEmpList();
+      renderEspelho();
+    };
+
+    window.renderEspelho = function() {
+      if (!isAdminUnlocked || !selectedGestorEmpId) return;
+      const emp = employees.find(e => e.id === selectedGestorEmpId);
+      const monthStr = document.getElementById("filterMonth").value;
+      const tbody = document.getElementById("espelhoBody");
+
+      if (!emp || !monthStr) {
+        tbody.innerHTML = `<tr><td colspan="9">Selecione uma funcionária e mês.</td></tr>`;
+        return;
+      }
+
+      document.getElementById("gestorSelectedEmpName").textContent = `${emp.name}`;
 
       const [year, month] = monthStr.split("-").map(Number);
       const daysInMonth = new Date(year, month, 0).getDate();
@@ -1590,7 +1686,7 @@
         const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         const dt = new Date(year, month - 1, d);
         const wName = weekNames[dt.getDay()];
-        const rec = records[`${emp.id}_${dateStr}`];
+        const rec = records[`${emp.id}_${dateStr}`] || {};
         const info = calculateDayMetrics(emp, dateStr, rec);
 
         totalWorked += info.workedMins;
@@ -1603,13 +1699,24 @@
         else if (info.type === "folga" || info.type === "ferias") rowClass = "off-row";
 
         const balClass = info.balanceMins > 0 ? "pos" : (info.balanceMins < 0 ? "neg" : "");
+        const statusNote = info.type !== "normal" && info.type !== "pendente" && info.type !== "sem_registro"
+          ? `<div style="font-size:10px;font-weight:700;margin-top:2px;">${info.label}</div>`
+          : "";
 
         html += `
-          <tr class="${rowClass}" style="cursor:pointer;" onclick="openEditDayModal('${dateStr}')">
-            <td><strong>${String(d).padStart(2, "0")}</strong> <small>(${wName})</small></td>
-            <td>${info.label}</td>
+          <tr class="${rowClass}">
+            <td><strong>${String(d).padStart(2, "0")}</strong> <small>(${wName})</small>${statusNote}</td>
+            <td><input type="time" class="inline-time" id="in_${dateStr}" value="${rec.entrada || ""}" /></td>
+            <td><input type="time" class="inline-time" id="s1_${dateStr}" value="${rec.saidaAlmoco || ""}" /></td>
+            <td><input type="time" class="inline-time" id="v1_${dateStr}" value="${rec.voltaAlmoco || ""}" /></td>
+            <td><input type="time" class="inline-time" id="out_${dateStr}" value="${rec.saida || ""}" /></td>
             <td>${info.workedMins > 0 ? minutesToTime(info.workedMins) : "-"}</td>
             <td class="${balClass}">${info.expectedMins > 0 || info.workedMins > 0 ? minutesToTime(info.balanceMins, true) : "-"}</td>
+            <td><input type="text" class="inline-obs" id="obs_${dateStr}" value="${rec.dayObs || ""}" placeholder="Observação..." /></td>
+            <td style="display:flex;gap:4px;">
+              <button class="btn btn-success btn-sm" onclick="saveInlineRow('${dateStr}')" title="Salvar linha">Salvar</button>
+              <button class="btn btn-light btn-sm" onclick="openEditDayModal('${dateStr}')" title="Status / Falta / Férias">•••</button>
+            </td>
           </tr>
         `;
       }
@@ -1623,15 +1730,47 @@
       balEl.className = `kpi-val ${netBalance >= 0 ? "pos" : "neg"}`;
     };
 
-    // Modal de Lançamento / Edição Admin
+    window.saveInlineRow = async function(dateStr) {
+      if (!isAdminUnlocked || !selectedGestorEmpId) return;
+      const emp = employees.find(e => e.id === selectedGestorEmpId);
+      if (!emp) return;
+
+      const entrada = document.getElementById(`in_${dateStr}`).value;
+      const saidaAlmoco = document.getElementById(`s1_${dateStr}`).value;
+      const voltaAlmoco = document.getElementById(`v1_${dateStr}`).value;
+      const saida = document.getElementById(`out_${dateStr}`).value;
+      const dayObs = document.getElementById(`obs_${dateStr}`).value.trim();
+
+      const existing = records[`${emp.id}_${dateStr}`] || {};
+      const hasAnyTime = entrada || saidaAlmoco || voltaAlmoco || saida;
+
+      const payload = {
+        ...existing,
+        empId: emp.id,
+        empName: emp.name,
+        date: dateStr,
+        status: hasAnyTime ? "normal" : (existing.status || "normal"),
+        entrada,
+        saidaAlmoco,
+        voltaAlmoco,
+        saida,
+        dayObs,
+        editedByAdmin: true,
+        updatedAt: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, "records", `${emp.id}_${dateStr}`), payload, { merge: true });
+      showToast(`Dia ${formatDateBR(dateStr)} salvo!`);
+    };
+
+    // Modal de Lançamento / Edição Admin (Status Especial)
     window.openEditDayModal = function(dateStr) {
       if (!isAdminUnlocked) {
         showToast("Acesso restrito ao administrador.");
         return;
       }
-      const empId = document.getElementById("filterEmp").value;
-      if (!empId) {
-        showToast("Cadastre uma funcionária primeiro.");
+      if (!selectedGestorEmpId) {
+        showToast("Selecione uma funcionária primeiro.");
         return;
       }
       document.getElementById("editDate").value = dateStr || getTodayStr();
@@ -1640,9 +1779,8 @@
     };
 
     window.loadDayIntoModal = function() {
-      const empId = document.getElementById("filterEmp").value;
       const dateStr = document.getElementById("editDate").value;
-      const rec = records[`${empId}_${dateStr}`] || {};
+      const rec = records[`${selectedGestorEmpId}_${dateStr}`] || {};
 
       document.getElementById("editStatus").value = rec.status || "normal";
       document.getElementById("editEntrada").value = rec.entrada || "";
@@ -1650,6 +1788,7 @@
       document.getElementById("editVoltaAlmoco").value = rec.voltaAlmoco || "";
       document.getElementById("editSaida").value = rec.saida || "";
       document.getElementById("editHolidayName").value = rec.holidayName || "";
+      document.getElementById("editDayObs").value = rec.dayObs || "";
 
       const knownReasons = ["Falta Injustificada", "Atestado Médico", "Consulta / Exame"];
       if (rec.absenceReason) {
@@ -1682,11 +1821,11 @@
     };
 
     window.saveDayRecord = async function() {
-      if (!isAdminUnlocked) return;
-      const empId = document.getElementById("filterEmp").value;
-      const emp = employees.find(e => e.id === empId);
+      if (!isAdminUnlocked || !selectedGestorEmpId) return;
+      const emp = employees.find(e => e.id === selectedGestorEmpId);
       const dateStr = document.getElementById("editDate").value;
       const status = document.getElementById("editStatus").value;
+      const dayObs = document.getElementById("editDayObs").value.trim();
 
       if (!emp || !dateStr) return;
 
@@ -1713,6 +1852,7 @@
         saidaAlmoco: status === "normal" ? document.getElementById("editSaidaAlmoco").value : "",
         voltaAlmoco: status === "normal" ? document.getElementById("editVoltaAlmoco").value : "",
         saida: status === "normal" ? document.getElementById("editSaida").value : "",
+        dayObs,
         editedByAdmin: true,
         updatedAt: new Date().toISOString()
       };
@@ -1723,10 +1863,9 @@
     };
 
     window.deleteDayRecord = async function() {
-      if (!isAdminUnlocked) return;
-      const empId = document.getElementById("filterEmp").value;
+      if (!isAdminUnlocked || !selectedGestorEmpId) return;
       const dateStr = document.getElementById("editDate").value;
-      await deleteDoc(doc(db, "records", `${empId}_${dateStr}`));
+      await deleteDoc(doc(db, "records", `${selectedGestorEmpId}_${dateStr}`));
       closeModal("modalEditDay");
       showToast("Dia limpo.");
     };
@@ -1940,9 +2079,8 @@
 
     // Relatório Mensal Completo
     window.abrirRelatorioMensal = function() {
-      const empId = document.getElementById("filterEmp").value;
+      const emp = employees.find(e => e.id === selectedGestorEmpId);
       const monthStr = document.getElementById("filterMonth").value;
-      const emp = employees.find(e => e.id === empId);
       if (!emp || !monthStr) return;
 
       const [year, month] = monthStr.split("-").map(Number);
@@ -1971,7 +2109,8 @@
         const s1 = rec?.saidaAlmoco || "-";
         const e2 = rec?.voltaAlmoco || "-";
         const s2 = rec?.saida || "-";
-        const obsDia = info.type === "normal" ? "Normal" : info.label;
+        const dayObs = rec?.dayObs ? ` (${rec.dayObs})` : "";
+        const obsDia = (info.type === "normal" ? "Normal" : info.label) + dayObs;
 
         lastGeneratedReportRows.push({
           Data: formatDateBR(dateStr),
@@ -1989,7 +2128,7 @@
           <tr>
             <td>${String(d).padStart(2, "0")}/${String(month).padStart(2, "0")}</td>
             <td>${wName}</td>
-            <td>${info.type === "normal" ? `${e1} | ${s1} | ${e2} | ${s2}` : `<strong>${obsDia}</strong>`}</td>
+            <td>${info.type === "normal" ? `${e1} | ${s1} | ${e2} | ${s2}${dayObs}` : `<strong>${obsDia}</strong>`}</td>
             <td>${info.workedMins > 0 ? minutesToTime(info.workedMins) : "-"}</td>
             <td>${minutesToTime(info.balanceMins, true)}</td>
           </tr>
@@ -2049,8 +2188,7 @@
 
     window.exportReportCSV = function() {
       if (!lastGeneratedReportRows.length) return;
-      const empId = document.getElementById("filterEmp").value;
-      const emp = employees.find(e => e.id === empId);
+      const emp = employees.find(e => e.id === selectedGestorEmpId);
       const monthStr = document.getElementById("filterMonth").value;
 
       const headers = ["Data", "Dia da Semana", "Situacao", "Entrada", "Saida Intervalo", "Volta Intervalo", "Saida", "Trabalhado", "Saldo"];
