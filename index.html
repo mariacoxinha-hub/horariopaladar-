@@ -573,12 +573,91 @@
       display: none;
     }
 
+    /* Layout do relatório individual / PDF (1 funcionário por página) */
+    .single-report-page {
+      background: #fff;
+    }
+
+    .single-report-page.page-break {
+      page-break-after: always;
+      break-after: page;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 7mm;
+    }
+
     @media print {
-      body { background: #fff; padding: 0; }
-      header, .bottom-nav, .no-print { display: none !important; }
-      .modal-backdrop { position: static; background: none; display: block !important; }
-      .modal-sheet { max-height: none; box-shadow: none; padding: 0; border-radius: 0; }
-      .card { box-shadow: none; border: 1px solid #ddd; }
+      html, body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100%;
+      }
+      body > *:not(#modalMonthlyReport) {
+        display: none !important;
+      }
+      #modalMonthlyReport {
+        position: static !important;
+        display: block !important;
+        background: #fff !important;
+        inset: auto !important;
+      }
+      .modal-sheet {
+        max-width: 100% !important;
+        max-height: none !important;
+        overflow: visible !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .single-report-page {
+        font-size: 9.5px !important;
+        line-height: 1.22 !important;
+      }
+      .single-report-page .rep-header {
+        padding-bottom: 5px !important;
+        margin-bottom: 6px !important;
+      }
+      .single-report-page .rep-header h2 {
+        font-size: 13px !important;
+        margin: 0 0 2px !important;
+      }
+      .single-report-page .rep-meta {
+        font-size: 9.5px !important;
+        line-height: 1.25 !important;
+      }
+      .single-report-page table {
+        font-size: 8.8px !important;
+        margin-bottom: 6px !important;
+      }
+      .single-report-page th,
+      .single-report-page td {
+        padding: 2px 4px !important;
+        line-height: 1.15 !important;
+      }
+      .single-report-page .rep-summary {
+        padding: 5px 7px !important;
+        font-size: 9.5px !important;
+        margin-bottom: 6px !important;
+      }
+      .single-report-page .rep-obs {
+        font-size: 9px !important;
+        margin-bottom: 8px !important;
+      }
+      .single-report-page .rep-obs ul {
+        margin: 2px 0 0 !important;
+        padding-left: 14px !important;
+      }
+      .single-report-page .rep-signatures {
+        margin-top: 12px !important;
+        gap: 20px !important;
+        font-size: 9.5px !important;
+      }
     }
   </style>
 </head>
@@ -761,7 +840,10 @@
 
       <section id="subEspelho">
         <div class="card">
-          <label>Funcionária</label>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+            <label style="margin:0;">Funcionária</label>
+            <input type="month" id="filterMonth" style="width:auto;padding:6px 10px;font-size:13px;" onchange="renderEspelho()" />
+          </div>
           <button type="button" id="btnOpenGestorPicker" class="btn btn-light btn-block" style="justify-content:space-between;" onclick="toggleGestorPicker()">
             <span id="gestorPickerLabel">Selecionar funcionária...</span>
             <span>▾</span>
@@ -769,13 +851,16 @@
           <div id="gestorPickerDropdown" class="hidden" style="margin-top:8px;border:1px solid var(--border);border-radius:12px;padding:8px;background:#f9f9fb;">
             <div id="gestorEmpList"></div>
           </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+            <button type="button" class="btn btn-success" style="flex:1;" onclick="abrirRelatorioTodosPDF()">📑 PDF de Todos (1 por pág.)</button>
+          </div>
         </div>
 
         <div id="gestorSheetSection" class="hidden">
           <div class="card">
             <div class="card-title">
               <span id="gestorSelectedEmpName">Espelho da Funcionária</span>
-              <input type="month" id="filterMonth" style="width:auto;padding:6px 10px;font-size:13px;" onchange="renderEspelho()" />
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button type="button" class="btn btn-primary" style="flex:1;" onclick="abrirRelatorioMensal()">📄 Gerar Relatório do Mês</button>
@@ -1036,14 +1121,14 @@
     </div>
   </div>
 
-  <!-- MODAL 4: RELATÓRIO MENSAL COMPLETO -->
+  <!-- MODAL 4: RELATÓRIO MENSAL COMPLETO (INDIVIDUAL OU TODOS 1 POR PÁGINA) -->
   <div id="modalMonthlyReport" class="modal-backdrop">
     <div class="modal-sheet" style="max-width:820px;">
       <div class="modal-header no-print">
-        <h3>Relatório Mensal de Frequência</h3>
-        <div style="display:flex;gap:6px;">
-          <button type="button" class="btn btn-success btn-sm" onclick="exportReportCSV()">Excel (CSV)</button>
-          <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">Imprimir / PDF</button>
+        <h3 id="reportModalHeading">Relatório Mensal de Frequência</h3>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button type="button" id="btnExportCsv" class="btn btn-success btn-sm" onclick="exportReportCSV()">Excel (CSV)</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">Salvar / Imprimir PDF</button>
           <button type="button" class="btn btn-light btn-sm" onclick="closeModal('modalMonthlyReport')">Fechar</button>
         </div>
       </div>
@@ -1146,7 +1231,6 @@
       setTimeout(() => { t.style.display = "none"; }, 2600);
     }
 
-    // Máscara HH:MM e navegação por Tab sem pular para miniatura de relógio
     function formatClockInput(input) {
       let digits = input.value.replace(/\D/g, "").slice(0, 4);
       if (digits.length >= 3) {
@@ -1307,7 +1391,6 @@
       document.getElementById("subAjustes").classList.toggle("hidden", sub !== "ajustes");
     };
 
-    // Cartão de Ponto: Lista à vista -> Clicar no nome abre janelinha de batida
     function renderPontoEmpList() {
       const container = document.getElementById("pontoEmpList");
       if (employees.length === 0) {
@@ -1421,7 +1504,6 @@
       showToast(`${nomesTipo[tipo]} registrada às ${horaAgora} — ${emp.name}`);
     };
 
-    // Cálculo de Horas de um Dia (respeita data de admissão quando preenchida; vazia = antiga)
     function calculateDayMetrics(emp, dateStr, rec) {
       if (emp.admission && dateStr < emp.admission) {
         return { type: "pre_hire", label: "Antes da contratação", workedMins: 0, expectedMins: 0, balanceMins: 0 };
@@ -1679,7 +1761,6 @@
       showToast("PIN atualizado com sucesso!");
     };
 
-    // Painel Gestor: Botão abre lista -> Seleciona funcionária -> Exibe tabela
     window.toggleGestorPicker = function() {
       if (!isAdminUnlocked) return;
       renderGestorEmpList();
@@ -2162,12 +2243,8 @@
       showToast("Feriado removido.");
     };
 
-    // Relatório Mensal Completo
-    window.abrirRelatorioMensal = function() {
-      const emp = employees.find(e => e.id === selectedGestorEmpId);
-      const monthStr = document.getElementById("filterMonth").value;
-      if (!emp || !monthStr) return;
-
+    // Constrói o HTML de 1 relatório no mesmo formato do relatório mensal individual
+    function buildSingleEmployeeReportHTML(emp, monthStr, addPageBreak = false, collectCsvRows = false) {
       const [year, month] = monthStr.split("-").map(Number);
       const daysInMonth = new Date(year, month, 0).getDate();
       const weekNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -2176,7 +2253,7 @@
       let totalWorked = 0;
       let totalExpected = 0;
       let totalFaltas = 0;
-      lastGeneratedReportRows = [];
+      if (collectCsvRows) lastGeneratedReportRows = [];
 
       let rowsHtml = "";
       for (let d = 1; d <= daysInMonth; d++) {
@@ -2197,17 +2274,19 @@
         const dayObs = rec?.dayObs ? ` (${rec.dayObs})` : "";
         const obsDia = (info.type === "normal" ? "Normal" : info.label) + dayObs;
 
-        lastGeneratedReportRows.push({
-          Data: formatDateBR(dateStr),
-          DiaSemana: wName,
-          Situacao: obsDia,
-          Entrada: e1,
-          SaidaIntervalo: s1,
-          VoltaIntervalo: e2,
-          Saida: s2,
-          Trabalhado: info.workedMins > 0 ? minutesToTime(info.workedMins) : "00:00",
-          Saldo: info.type !== "pre_hire" ? minutesToTime(info.balanceMins, true) : "00:00"
-        });
+        if (collectCsvRows) {
+          lastGeneratedReportRows.push({
+            Data: formatDateBR(dateStr),
+            DiaSemana: wName,
+            Situacao: obsDia,
+            Entrada: e1,
+            SaidaIntervalo: s1,
+            VoltaIntervalo: e2,
+            Saida: s2,
+            Trabalhado: info.workedMins > 0 ? minutesToTime(info.workedMins) : "00:00",
+            Saldo: info.type !== "pre_hire" ? minutesToTime(info.balanceMins, true) : "00:00"
+          });
+        }
 
         rowsHtml += `
           <tr>
@@ -2226,48 +2305,88 @@
 
       const saldoFinal = totalWorked - totalExpected;
 
-      document.getElementById("reportPrintableArea").innerHTML = `
-        <div style="border-bottom:2px solid #1c1c1e;padding-bottom:10px;margin-bottom:12px;">
-          <h2 style="margin:0 0 4px;font-size:18px;text-transform:uppercase;">Espelho de Ponto Mensal — ${monthName}</h2>
-          <div style="font-size:13px;line-height:1.5;">
-            <strong>Funcionária:</strong> ${emp.name} &nbsp;|&nbsp; <strong>Função:</strong> ${emp.role || "-"}<br>
-            <strong>Admissão:</strong> ${emp.admission ? formatDateBR(emp.admission) : "Funcionária antiga"} &nbsp;|&nbsp; <strong>Último Exame Periódico:</strong> ${formatDateBR(emp.lastExam)}<br>
-            <strong>Jornada Padrão:</strong> Seg–Sex (${emp.loadWeek || "08:00"}) | Sáb (${emp.loadSat || "00:00"})
+      return `
+        <div class="single-report-page ${addPageBreak ? "page-break" : ""}">
+          <div class="rep-header" style="border-bottom:2px solid #1c1c1e;padding-bottom:10px;margin-bottom:12px;">
+            <h2 style="margin:0 0 4px;font-size:18px;text-transform:uppercase;">Espelho de Ponto Mensal — ${monthName}</h2>
+            <div class="rep-meta" style="font-size:13px;line-height:1.5;">
+              <strong>Funcionária:</strong> ${emp.name} &nbsp;|&nbsp; <strong>Função:</strong> ${emp.role || "-"}<br>
+              <strong>Admissão:</strong> ${emp.admission ? formatDateBR(emp.admission) : "Funcionária antiga"} &nbsp;|&nbsp; <strong>Último Exame Periódico:</strong> ${formatDateBR(emp.lastExam)}<br>
+              <strong>Jornada Padrão:</strong> Seg–Sex (${emp.loadWeek || "08:00"}) | Sáb (${emp.loadSat || "00:00"})
+            </div>
+          </div>
+
+          <table style="font-size:11px;margin-bottom:14px;">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Dia</th>
+                <th>Horários / Ocorrência</th>
+                <th>Total</th>
+                <th>Saldo</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+
+          <div class="rep-summary" style="background:#f2f2f7;padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px;">
+            <strong>Resumo do Mês:</strong>
+            Trabalhado: <strong>${minutesToTime(totalWorked)}</strong> &nbsp;|&nbsp;
+            Previsto: <strong>${minutesToTime(totalExpected)}</strong> &nbsp;|&nbsp;
+            Saldo Final: <strong>${minutesToTime(saldoFinal, true)}</strong> &nbsp;|&nbsp;
+            Faltas: <strong>${totalFaltas}</strong>
+          </div>
+
+          <div class="rep-obs" style="font-size:12px;margin-bottom:24px;">
+            <strong>Observações da Ficha:</strong>
+            <ul style="margin:6px 0 0;padding-left:18px;">${obsEmpHtml}</ul>
+          </div>
+
+          <div class="rep-signatures" style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:32px;font-size:12px;text-align:center;">
+            <div style="border-top:1px solid #333;padding-top:6px;">Assinatura do Empregador</div>
+            <div style="border-top:1px solid #333;padding-top:6px;">Assinatura: ${emp.name}</div>
           </div>
         </div>
-
-        <table style="font-size:11px;margin-bottom:14px;">
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Dia</th>
-              <th>Horários / Ocorrência</th>
-              <th>Total</th>
-              <th>Saldo</th>
-            </tr>
-          </thead>
-          <tbody>${rowsHtml}</tbody>
-        </table>
-
-        <div style="background:#f2f2f7;padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px;">
-          <strong>Resumo do Mês:</strong>
-          Trabalhado: <strong>${minutesToTime(totalWorked)}</strong> &nbsp;|&nbsp;
-          Previsto: <strong>${minutesToTime(totalExpected)}</strong> &nbsp;|&nbsp;
-          Saldo Final: <strong>${minutesToTime(saldoFinal, true)}</strong> &nbsp;|&nbsp;
-          Faltas: <strong>${totalFaltas}</strong>
-        </div>
-
-        <div style="font-size:12px;margin-bottom:24px;">
-          <strong>Observações da Ficha:</strong>
-          <ul style="margin:6px 0 0;padding-left:18px;">${obsEmpHtml}</ul>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:32px;font-size:12px;text-align:center;">
-          <div style="border-top:1px solid #333;padding-top:6px;">Assinatura do Empregador</div>
-          <div style="border-top:1px solid #333;padding-top:6px;">Assinatura: ${emp.name}</div>
-        </div>
       `;
+    }
 
+    // Relatório Mensal de 1 Funcionária
+    window.abrirRelatorioMensal = function() {
+      const emp = employees.find(e => e.id === selectedGestorEmpId);
+      const monthStr = document.getElementById("filterMonth").value;
+      if (!emp || !monthStr) return;
+
+      document.getElementById("reportModalHeading").textContent = `Relatório Mensal — ${emp.name}`;
+      document.getElementById("btnExportCsv").classList.remove("hidden");
+      document.getElementById("reportPrintableArea").innerHTML = buildSingleEmployeeReportHTML(emp, monthStr, false, true);
+      document.getElementById("modalMonthlyReport").classList.add("open");
+    };
+
+    // Relatório de Todos os Funcionários (1 por página)
+    window.abrirRelatorioTodosPDF = function() {
+      if (!isAdminUnlocked) {
+        showToast("Acesso restrito ao administrador.");
+        return;
+      }
+      const monthStr = document.getElementById("filterMonth").value;
+      if (!monthStr) {
+        showToast("Selecione o mês primeiro.");
+        return;
+      }
+      if (employees.length === 0) {
+        showToast("Nenhuma funcionária cadastrada.");
+        return;
+      }
+
+      document.getElementById("reportModalHeading").textContent = `Relatórios de Todos (${employees.length} — 1 por pág.)`;
+      document.getElementById("btnExportCsv").classList.add("hidden");
+
+      const allHtml = employees.map((emp, idx) => {
+        const isLast = idx === employees.length - 1;
+        return buildSingleEmployeeReportHTML(emp, monthStr, !isLast, false);
+      }).join("");
+
+      document.getElementById("reportPrintableArea").innerHTML = allHtml;
       document.getElementById("modalMonthlyReport").classList.add("open");
     };
 
