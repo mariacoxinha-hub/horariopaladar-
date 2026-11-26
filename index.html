@@ -138,6 +138,58 @@
       text-transform: capitalize;
     }
 
+    /* Lista visível de funcionárias no Cartão de Ponto */
+    .ponto-emp-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .ponto-emp-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.15s, border-color 0.15s;
+    }
+
+    .ponto-emp-card:active {
+      transform: scale(0.99);
+      background: #f2f2f7;
+      border-color: var(--primary);
+    }
+
+    .ponto-emp-name {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    .ponto-emp-role {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .status-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #f2f2f7;
+      color: #636366;
+    }
+
+    .status-pill.working { background: #e8f5e9; color: #1b5e20; }
+    .status-pill.lunch { background: #fff8e1; color: #b45309; }
+    .status-pill.done { background: #e3f2fd; color: #0d47a1; }
+    .status-pill.off { background: #f3e5f5; color: #6a1b9a; }
+
     /* Botões de Batida */
     .punch-grid {
       display: grid;
@@ -149,7 +201,6 @@
       border: none;
       border-radius: 14px;
       padding: 16px 12px;
-      color: #fff;
       font-weight: 700;
       font-size: 15px;
       cursor: pointer;
@@ -157,7 +208,7 @@
       flex-direction: column;
       align-items: center;
       gap: 4px;
-      opacity: 0.6;
+      opacity: 0.65;
       transition: transform 0.1s, opacity 0.15s, box-shadow 0.15s;
     }
 
@@ -543,7 +594,7 @@
 
   <div id="toast" class="toast"></div>
 
-  <!-- ABA 1: CARTÃO DE PONTO (PÚBLICA) -->
+  <!-- ABA 1: CARTÃO DE PONTO (LISTA À VISTA + JANELINHA AO CLICAR) -->
   <main id="tabPonto" class="container">
     <div class="clock-box">
       <div id="liveTime" class="clock-time">00:00:00</div>
@@ -551,21 +602,24 @@
     </div>
 
     <div class="card">
-      <label>Funcionária</label>
-      <button type="button" id="btnOpenPontoPicker" class="btn btn-light btn-block" style="justify-content:space-between;" onclick="togglePontoPicker()">
-        <span id="pontoPickerLabel">Selecionar funcionária...</span>
-        <span>▾</span>
-      </button>
-      <div id="pontoPickerDropdown" class="hidden" style="margin-top:8px;border:1px solid var(--border);border-radius:12px;padding:8px;background:#f9f9fb;">
-        <div id="pontoEmpList"></div>
+      <div class="card-title">Toque no nome para registrar o ponto</div>
+      <div id="pontoEmpList" class="ponto-emp-list">
+        <p style="color:var(--muted);font-size:13px;">Carregando equipe...</p>
       </div>
     </div>
+  </main>
 
-    <div class="card">
-      <div class="card-title">
-        <span>Registrar Horário</span>
-        <span id="selectedEmpLabel" style="font-size:12px;color:var(--primary);">Nenhuma selecionada</span>
+  <!-- JANELINHA DE BATIDA DE PONTO -->
+  <div id="modalPunch" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <h3 id="punchModalTitle">Registrar Horário</h3>
+          <div id="punchModalSubtitle" style="font-size:12px;color:var(--muted);margin-top:2px;"></div>
+        </div>
+        <button type="button" class="btn btn-light btn-sm" onclick="closeModal('modalPunch')">Fechar</button>
       </div>
+
       <div class="punch-grid">
         <button type="button" class="punch-btn btn-in" id="btnEntrada" onclick="registrarBatida('entrada')">
           Entrada
@@ -585,7 +639,7 @@
         </button>
       </div>
     </div>
-  </main>
+  </div>
 
   <!-- ABA 2: KÁTIA -->
   <main id="tabKatia" class="container hidden">
@@ -1191,6 +1245,7 @@
         employees.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
         if (selectedPontoEmpId && !employees.some(e => e.id === selectedPontoEmpId)) {
           selectedPontoEmpId = null;
+          closeModal("modalPunch");
         }
         if (selectedGestorEmpId && !employees.some(e => e.id === selectedGestorEmpId)) {
           selectedGestorEmpId = null;
@@ -1200,7 +1255,7 @@
           selectedKatiaEmpId = null;
         }
         renderPontoEmpList();
-        renderPunchButtons();
+        renderPunchModal();
         renderStaffList();
         renderGestorEmpList();
         renderEspelho();
@@ -1213,7 +1268,7 @@
         records = {};
         snap.forEach((d) => { records[d.id] = d.data(); });
         renderPontoEmpList();
-        renderPunchButtons();
+        renderPunchModal();
         renderEspelho();
         renderKatiaEmpReport();
       });
@@ -1252,29 +1307,18 @@
       document.getElementById("subAjustes").classList.toggle("hidden", sub !== "ajustes");
     };
 
-    // Cartão de Ponto: Botão abre lista -> Seleciona funcionária -> Fecha lista
-    window.togglePontoPicker = function() {
-      renderPontoEmpList();
-      document.getElementById("pontoPickerDropdown").classList.toggle("hidden");
-    };
-
+    // Cartão de Ponto: Lista à vista -> Clicar no nome abre janelinha de batida
     function renderPontoEmpList() {
       const container = document.getElementById("pontoEmpList");
-      const labelEl = document.getElementById("pontoPickerLabel");
-      const currentEmp = employees.find(e => e.id === selectedPontoEmpId);
-      labelEl.textContent = currentEmp
-        ? `${currentEmp.name} (${currentEmp.role || "Equipe"})`
-        : "Selecionar funcionária...";
-
       if (employees.length === 0) {
-        container.innerHTML = `<p style="color:var(--muted);font-size:13px;margin:6px;">Nenhuma funcionária cadastrada.</p>`;
+        container.innerHTML = `<p style="color:var(--muted);font-size:13px;">Nenhuma funcionária cadastrada.</p>`;
         return;
       }
 
       const today = getTodayStr();
       container.innerHTML = employees.map(emp => {
         const rec = records[`${emp.id}_${today}`] || {};
-        let statusLabel = "Não iniciou";
+        let statusLabel = "Aguardando";
         let statusClass = "";
         if (rec.status && rec.status !== "normal") {
           statusLabel = rec.status.toUpperCase();
@@ -1293,42 +1337,41 @@
           statusClass = "working";
         }
 
-        const isAct = emp.id === selectedPontoEmpId;
+        const punchesSummary = [rec.entrada, rec.saidaAlmoco, rec.voltaAlmoco, rec.saida]
+          .filter(Boolean)
+          .join(" • ");
+
         return `
-          <div class="select-emp-row ${isAct ? "active-emp" : ""}" style="margin-bottom:6px;" onclick="selectPontoEmp('${emp.id}')">
+          <div class="ponto-emp-card" onclick="openPunchModal('${emp.id}')">
             <div>
-              <div style="font-weight:700;font-size:14px;">${emp.name}</div>
-              <div style="font-size:12px;color:var(--muted);">${emp.role || "Equipe"}</div>
+              <div class="ponto-emp-name">${emp.name}</div>
+              <div class="ponto-emp-role">${emp.role || "Equipe"}${punchesSummary ? ` • ${punchesSummary}` : ""}</div>
             </div>
-            <span class="status-pill ${statusClass}">${statusLabel}</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="status-pill ${statusClass}">${statusLabel}</span>
+              <span style="color:var(--muted);font-size:18px;">›</span>
+            </div>
           </div>
         `;
       }).join("");
     }
 
-    window.selectPontoEmp = function(empId) {
+    window.openPunchModal = function(empId) {
       selectedPontoEmpId = empId;
-      document.getElementById("pontoPickerDropdown").classList.add("hidden");
-      renderPontoEmpList();
-      renderPunchButtons();
+      renderPunchModal();
+      document.getElementById("modalPunch").classList.add("open");
     };
 
-    function renderPunchButtons() {
+    function renderPunchModal() {
       const emp = employees.find(e => e.id === selectedPontoEmpId);
-      const lbl = document.getElementById("selectedEmpLabel");
       const btns = ["btnEntrada", "btnSaidaAlmoco", "btnVoltaAlmoco", "btnSaida"];
       btns.forEach(id => document.getElementById(id).classList.remove("recommended"));
 
-      if (!emp) {
-        lbl.textContent = "Nenhuma selecionada";
-        document.getElementById("lblEntrada").textContent = "--:--";
-        document.getElementById("lblSaidaAlmoco").textContent = "--:--";
-        document.getElementById("lblVoltaAlmoco").textContent = "--:--";
-        document.getElementById("lblSaida").textContent = "--:--";
-        return;
-      }
+      if (!emp) return;
 
-      lbl.textContent = emp.name;
+      document.getElementById("punchModalTitle").textContent = emp.name;
+      document.getElementById("punchModalSubtitle").textContent = emp.role || "Equipe";
+
       const rec = records[`${emp.id}_${getTodayStr()}`] || {};
       document.getElementById("lblEntrada").textContent = rec.entrada || "--:--";
       document.getElementById("lblSaidaAlmoco").textContent = rec.saidaAlmoco || "--:--";
@@ -1374,7 +1417,8 @@
         voltaAlmoco: "Volta Intervalo",
         saida: "Saída"
       };
-      showToast(`${nomesTipo[tipo]} registrada às ${horaAgora} para ${emp.name}`);
+      closeModal("modalPunch");
+      showToast(`${nomesTipo[tipo]} registrada às ${horaAgora} — ${emp.name}`);
     };
 
     // Cálculo de Horas de um Dia (respeita data de admissão quando preenchida; vazia = antiga)
